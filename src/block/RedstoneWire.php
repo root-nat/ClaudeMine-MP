@@ -29,6 +29,8 @@ use pocketmine\block\utils\StaticSupportTrait;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\math\Facing;
+use function max;
+use function min;
 
 class RedstoneWire extends Flowable implements AnalogRedstoneSignalEmitter{
 	use AnalogRedstoneSignalEmitterTrait;
@@ -36,9 +38,34 @@ class RedstoneWire extends Flowable implements AnalogRedstoneSignalEmitter{
 
 	public function readStateFromWorld() : Block{
 		parent::readStateFromWorld();
-		//TODO: check connections to nearby redstone components
-
+		$this->signalStrength = $this->calculateSignalStrength();
 		return $this;
+	}
+
+	public function onNearbyBlockChange() : void{
+		$newStrength = $this->calculateSignalStrength();
+		if($newStrength !== $this->signalStrength){
+			$this->signalStrength = $newStrength;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return $face !== Facing::UP ? $this->signalStrength : 0;
+	}
+
+	private function calculateSignalStrength() : int{
+		$maxSignal = 0;
+		foreach(Facing::HORIZONTAL as $face){
+			$neighbor = $this->getSide($face);
+			if($neighbor instanceof self){
+				$maxSignal = max($maxSignal, $neighbor->getOutputSignalStrength() - 1);
+			}else{
+				$maxSignal = max($maxSignal, $neighbor->getWeakRedstonePower(Facing::opposite($face)));
+				$maxSignal = max($maxSignal, $neighbor->getStrongRedstonePower(Facing::opposite($face)));
+			}
+		}
+		return min(15, max(0, $maxSignal));
 	}
 
 	private function canBeSupportedAt(Block $block) : bool{

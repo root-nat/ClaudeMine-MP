@@ -65,6 +65,10 @@ abstract class PressurePlate extends Transparent{
 		return $block->getAdjacentSupportType(Facing::DOWN) !== SupportType::NONE;
 	}
 
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->hasOutputSignal() ? 15 : 0;
+	}
+
 	public function hasEntityCollision() : bool{
 		return true;
 	}

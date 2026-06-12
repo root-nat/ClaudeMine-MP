@@ -83,6 +83,14 @@ abstract class Button extends Flowable implements AnyFacing{
 		}
 	}
 
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->pressed ? 15 : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return ($this->pressed && $face === Facing::opposite($this->facing)) ? 15 : 0;
+	}
+
 	public function onNearbyBlockChange() : void{
 		if(!$this->canBeSupportedAt($this, $this->facing)){
 			$this->position->getWorld()->useBreakOn($this->position);

@@ -23,7 +23,13 @@ declare(strict_types=1);
 
 namespace pocketmine\block\tile;
 
+use pocketmine\block\VanillaBlocks;
+use pocketmine\data\bedrock\EffectIdMap;
+use pocketmine\entity\effect\EffectInstance;
+use pocketmine\entity\Living;
+use pocketmine\math\AxisAlignedBB;
 use pocketmine\nbt\tag\CompoundTag;
+use function in_array;
 
 final class Beacon extends Spawnable{
 	private const TAG_PRIMARY = "primary"; //TAG_Int
@@ -55,4 +61,60 @@ final class Beacon extends Spawnable{
 	public function getSecondaryEffect() : int{ return $this->secondaryEffect; }
 
 	public function setSecondaryEffect(int $secondaryEffect) : void{ $this->secondaryEffect = $secondaryEffect; }
+
+	private function calculateTier() : int{
+		$world = $this->position->getWorld();
+		$validIds = [
+			VanillaBlocks::IRON()->getTypeId(),
+			VanillaBlocks::GOLD()->getTypeId(),
+			VanillaBlocks::DIAMOND()->getTypeId(),
+			VanillaBlocks::EMERALD()->getTypeId(),
+			VanillaBlocks::NETHERITE()->getTypeId(),
+		];
+		$bx = $this->position->getFloorX();
+		$by = $this->position->getFloorY();
+		$bz = $this->position->getFloorZ();
+		for($tier = 1; $tier <= 4; $tier++){
+			$y = $by - $tier;
+			for($x = $bx - $tier; $x <= $bx + $tier; $x++){
+				for($z = $bz - $tier; $z <= $bz + $tier; $z++){
+					if(!in_array($world->getBlockAt($x, $y, $z)->getTypeId(), $validIds, true)){
+						return $tier - 1;
+					}
+				}
+			}
+		}
+		return 4;
+	}
+
+	public function updateBeacon() : void{
+		$tier = $this->calculateTier();
+		if($tier === 0 || $this->primaryEffect === 0){
+			return;
+		}
+		$primaryEffect = EffectIdMap::getInstance()->fromId($this->primaryEffect);
+		if($primaryEffect === null){
+			return;
+		}
+		$range = 10 + $tier * 10;
+		$duration = 180;
+		$primaryAmplifier = ($tier === 4 && $this->secondaryEffect === $this->primaryEffect) ? 1 : 0;
+		$secondaryEffect = ($tier === 4 && $this->secondaryEffect !== 0 && $this->secondaryEffect !== $this->primaryEffect)
+			? EffectIdMap::getInstance()->fromId($this->secondaryEffect)
+			: null;
+		$world = $this->position->getWorld();
+		$pos = $this->position;
+		$bb = new AxisAlignedBB(
+			$pos->x - $range, $world->getMinY(), $pos->z - $range,
+			$pos->x + $range + 1, $world->getMaxY(), $pos->z + $range + 1
+		);
+		foreach($world->getNearbyEntities($bb) as $entity){
+			if($entity instanceof Living){
+				$entity->getEffects()->add(new EffectInstance($primaryEffect, $duration, $primaryAmplifier));
+				if($secondaryEffect !== null){
+					$entity->getEffects()->add(new EffectInstance($secondaryEffect, $duration, 0));
+				}
+			}
+		}
+	}
 }

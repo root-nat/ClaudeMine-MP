@@ -21,27 +21,28 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\block;
+namespace pocketmine\block\inventory;
 
-use pocketmine\block\tile\Beacon as TileBeacon;
+use pocketmine\player\Player;
 
-final class Beacon extends Transparent{
+class DoubleTrappedChestInventory extends DoubleChestInventory{
 
-	public function getLightLevel() : int{
-		return 15;
+	public function onOpen(Player $who) : void{
+		parent::onOpen($who);
+		$this->notifyBlocks();
 	}
 
-	public function readStateFromWorld() : Block{
-		parent::readStateFromWorld();
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 80);
-		return $this;
+	public function onClose(Player $who) : void{
+		parent::onClose($who);
+		$this->notifyBlocks();
 	}
 
-	public function onScheduledUpdate() : void{
-		$tile = $this->position->getWorld()->getTile($this->position);
-		if($tile instanceof TileBeacon){
-			$tile->updateBeacon();
+	private function notifyBlocks() : void{
+		foreach([$this->getLeftSide()->getHolder(), $this->getRightSide()->getHolder()] as $holder){
+			if($holder->isValid()){
+				$world = $holder->getWorld();
+				$world->setBlock($holder, $world->getBlock($holder));
+			}
 		}
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 80);
 	}
 }

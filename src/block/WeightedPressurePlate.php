@@ -43,6 +43,10 @@ class WeightedPressurePlate extends PressurePlate implements AnalogRedstoneSigna
 		$this->signalStrengthFactor = $signalStrengthFactor;
 	}
 
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->signalStrength;
+	}
+
 	protected function hasOutputSignal() : bool{
 		return $this->signalStrength > 0;
 	}

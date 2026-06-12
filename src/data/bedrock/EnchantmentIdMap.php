@@ -50,6 +50,7 @@ final class EnchantmentIdMap{
 
 		$this->register(EnchantmentIds::KNOCKBACK, VanillaEnchantments::KNOCKBACK());
 		$this->register(EnchantmentIds::FIRE_ASPECT, VanillaEnchantments::FIRE_ASPECT());
+		$this->register(EnchantmentIds::LOYALTY, VanillaEnchantments::LOYALTY());
 
 		$this->register(EnchantmentIds::EFFICIENCY, VanillaEnchantments::EFFICIENCY());
 		$this->register(EnchantmentIds::FORTUNE, VanillaEnchantments::FORTUNE());

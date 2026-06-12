@@ -23,11 +23,13 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
+use pocketmine\block\tile\Container as TileContainer;
 use pocketmine\block\tile\Hopper as TileHopper;
 use pocketmine\block\utils\PoweredByRedstone;
 use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\inventory\Inventory;
 use pocketmine\item\Item;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
@@ -92,9 +94,48 @@ class Hopper extends Transparent implements PoweredByRedstone{
 		return false;
 	}
 
-	public function onScheduledUpdate() : void{
-		//TODO
+	public function readStateFromWorld() : Block{
+		parent::readStateFromWorld();
+		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 8);
+		return $this;
 	}
 
-	//TODO: redstone logic, sucking logic
+	public function onScheduledUpdate() : void{
+		$world = $this->position->getWorld();
+		if(!$this->powered){
+			$tile = $world->getTile($this->position);
+			if($tile instanceof TileHopper){
+				$inv = $tile->getInventory();
+				$pushed = false;
+				$outputTile = $world->getTile($this->position->getSide($this->facing));
+				if($outputTile instanceof TileContainer){
+					$pushed = $this->transferOneItem($inv, $outputTile->getInventory());
+				}
+				if(!$pushed){
+					$aboveTile = $world->getTile($this->position->getSide(Facing::UP));
+					if($aboveTile instanceof TileContainer){
+						$this->transferOneItem($aboveTile->getInventory(), $inv);
+					}
+				}
+			}
+		}
+		$world->scheduleDelayedBlockUpdate($this->position, 8);
+	}
+
+	private function transferOneItem(Inventory $from, Inventory $to) : bool{
+		for($i = 0; $i < $from->getSize(); $i++){
+			$item = $from->getItem($i);
+			if($item->isNull()){
+				continue;
+			}
+			$transfer = (clone $item)->setCount(1);
+			if($to->canAddItem($transfer)){
+				$item->setCount($item->getCount() - 1);
+				$from->setItem($i, $item);
+				$to->addItem($transfer);
+				return true;
+			}
+		}
+		return false;
+	}
 }

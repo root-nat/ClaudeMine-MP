@@ -164,6 +164,15 @@ final class VanillaEnchantmentsInputs extends RegistrySource{
 			fn(int $level) : int => 20 * ($level - 1) + 5,
 			50
 		));
+		self::register("LOYALTY", new Enchantment(
+			KnownTranslationFactory::enchantment_tridentLoyalty(),
+			Rarity::UNCOMMON,
+			0,
+			0,
+			3,
+			fn(int $level) : int => $level * 7 + 5,
+			5
+		));
 		self::register("FIRE_ASPECT", new FireAspectEnchantment(
 			KnownTranslationFactory::enchantment_fire(),
 			Rarity::RARE,

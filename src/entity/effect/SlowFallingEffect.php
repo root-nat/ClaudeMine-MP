@@ -21,27 +21,7 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\block;
+namespace pocketmine\entity\effect;
 
-use pocketmine\block\tile\Beacon as TileBeacon;
-
-final class Beacon extends Transparent{
-
-	public function getLightLevel() : int{
-		return 15;
-	}
-
-	public function readStateFromWorld() : Block{
-		parent::readStateFromWorld();
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 80);
-		return $this;
-	}
-
-	public function onScheduledUpdate() : void{
-		$tile = $this->position->getWorld()->getTile($this->position);
-		if($tile instanceof TileBeacon){
-			$tile->updateBeacon();
-		}
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 80);
-	}
+class SlowFallingEffect extends Effect{
 }

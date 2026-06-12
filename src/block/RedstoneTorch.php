@@ -26,6 +26,7 @@ namespace pocketmine\block;
 use pocketmine\block\utils\Lightable;
 use pocketmine\block\utils\LightableTrait;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\math\Facing;
 
 class RedstoneTorch extends Torch implements Lightable{
 	use LightableTrait;
@@ -42,5 +43,13 @@ class RedstoneTorch extends Torch implements Lightable{
 
 	public function getLightLevel() : int{
 		return $this->lit ? 7 : 0;
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return ($this->lit && $face !== Facing::opposite($this->facing)) ? 15 : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return ($this->lit && $face === Facing::UP) ? 15 : 0;
 	}
 }

@@ -101,9 +101,15 @@ class Lever extends Flowable{
 		return true;
 	}
 
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->activated ? 15 : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return ($this->activated && $face === Facing::opposite($this->facing->getFacing())) ? 15 : 0;
+	}
+
 	private function canBeSupportedAt(Block $block, int $face) : bool{
 		return $block->getAdjacentSupportType($face)->hasCenterSupport();
 	}
-
-	//TODO
 }

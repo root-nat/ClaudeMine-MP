@@ -36,6 +36,7 @@ use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
+use function max;
 
 class RedstoneRepeater extends Flowable implements PoweredByRedstone, HorizontalFacing{
 	use HorizontalFacingTrait;
@@ -84,9 +85,35 @@ class RedstoneRepeater extends Flowable implements PoweredByRedstone, Horizontal
 		return true;
 	}
 
+	public function onNearbyBlockChange() : void{
+		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, $this->delay * 2);
+	}
+
+	public function onScheduledUpdate() : void{
+		$powered = $this->getInputSignal() > 0;
+		if($powered !== $this->powered){
+			$this->powered = $powered;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return ($this->powered && $face === $this->facing) ? 15 : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return $this->getWeakRedstonePower($face);
+	}
+
+	private function getInputSignal() : int{
+		$rear = $this->getSide(Facing::opposite($this->facing));
+		return max(
+			$rear->getWeakRedstonePower($this->facing),
+			$rear->getStrongRedstonePower($this->facing)
+		);
+	}
+
 	private function canBeSupportedAt(Block $block) : bool{
 		return $block->getAdjacentSupportType(Facing::DOWN) !== SupportType::NONE;
 	}
-
-	//TODO: redstone functionality
 }

@@ -32,6 +32,7 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 use function array_intersect_key;
+use function array_rand;
 use function count;
 
 class Vine extends Flowable{
@@ -141,7 +142,28 @@ class Vine extends Flowable{
 	}
 
 	public function onRandomTick() : void{
-		//TODO: vine growth
+		if(count($this->faces) === 0){
+			return;
+		}
+		$world = $this->position->getWorld();
+		$below = $this->getSide(Facing::DOWN);
+		if($below->canBeReplaced()){
+			$world->setBlock($below->getPosition(), clone $this);
+			return;
+		}
+		$face = $this->faces[array_rand($this->faces)];
+		$adjacent = $this->getSide($face);
+		if($adjacent->isSolid()){
+			foreach(Facing::HORIZONTAL as $spreadFace){
+				$spreadTarget = $this->getSide($spreadFace);
+				if($spreadTarget->canBeReplaced() && $spreadTarget->getSide($face)->isSolid()){
+					$newVine = $spreadTarget instanceof self ? clone $spreadTarget : VanillaBlocks::VINES();
+					if(!$newVine->hasFace($face)){
+						$world->setBlock($spreadTarget->getPosition(), $newVine->setFace($face, true));
+					}
+				}
+			}
+		}
 	}
 
 	public function getDrops(Item $item) : array{

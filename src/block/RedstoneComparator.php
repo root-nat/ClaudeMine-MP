@@ -40,6 +40,7 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 use function assert;
+use function max;
 
 class RedstoneComparator extends Flowable implements AnalogRedstoneSignalEmitter, PoweredByRedstone, HorizontalFacing{
 	use HorizontalFacingTrait;
@@ -99,9 +100,45 @@ class RedstoneComparator extends Flowable implements AnalogRedstoneSignalEmitter
 		return true;
 	}
 
+	public function onNearbyBlockChange() : void{
+		$newSignal = $this->calculateOutputSignal();
+		$powered = $newSignal > 0;
+		if($newSignal !== $this->signalStrength || $powered !== $this->powered){
+			$this->signalStrength = $newSignal;
+			$this->powered = $powered;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return ($face === $this->facing) ? $this->signalStrength : 0;
+	}
+
+	private function calculateOutputSignal() : int{
+		$rear = $this->getSide(Facing::opposite($this->facing));
+		$rearSignal = max(
+			$rear->getWeakRedstonePower($this->facing),
+			$rear->getStrongRedstonePower($this->facing)
+		);
+
+		$leftFace = Facing::rotateY($this->facing, false);
+		$rightFace = Facing::rotateY($this->facing, true);
+		$leftBlock = $this->getSide($leftFace);
+		$rightBlock = $this->getSide($rightFace);
+		$sideSignal = max(
+			$leftBlock->getWeakRedstonePower(Facing::opposite($leftFace)),
+			$leftBlock->getStrongRedstonePower(Facing::opposite($leftFace)),
+			$rightBlock->getWeakRedstonePower(Facing::opposite($rightFace)),
+			$rightBlock->getStrongRedstonePower(Facing::opposite($rightFace))
+		);
+
+		if($this->isSubtractMode){
+			return max(0, $rearSignal - $sideSignal);
+		}
+		return $rearSignal >= $sideSignal ? $rearSignal : 0;
+	}
+
 	private function canBeSupportedAt(Block $block) : bool{
 		return $block->getAdjacentSupportType(Facing::DOWN) !== SupportType::NONE;
 	}
-
-	//TODO: redstone functionality
 }

@@ -27,12 +27,31 @@ use pocketmine\block\utils\Lightable;
 use pocketmine\block\utils\PoweredByRedstone;
 use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\math\Facing;
 
 class RedstoneLamp extends Opaque implements PoweredByRedstone, Lightable{
 	use PoweredByRedstoneTrait;
 
 	protected function describeBlockOnlyState(RuntimeDataDescriber $w) : void{
 		$w->bool($this->powered);
+	}
+
+	public function onNearbyBlockChange() : void{
+		$powered = $this->isReceivingPower();
+		if($this->powered !== $powered){
+			$this->powered = $powered;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
+	}
+
+	private function isReceivingPower() : bool{
+		foreach(Facing::ALL as $face){
+			$neighbor = $this->getSide($face);
+			if($neighbor->getWeakRedstonePower(Facing::opposite($face)) > 0 || $neighbor->getStrongRedstonePower(Facing::opposite($face)) > 0){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public function getLightLevel() : int{

@@ -115,5 +115,7 @@ class Jukebox extends Opaque{
 		}
 	}
 
-	//TODO: Jukebox has redstone effects, they are not implemented.
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->record !== null ? 15 : 0;
+	}
 }

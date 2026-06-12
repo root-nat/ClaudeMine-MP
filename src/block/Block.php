@@ -569,6 +569,26 @@ class Block{
 	}
 
 	/**
+	 * Returns the weak redstone power emitted by this block toward the given face.
+	 * Weak power does not pass through blocks.
+	 *
+	 * @return int 0-15
+	 */
+	public function getWeakRedstonePower(int $face) : int{
+		return 0;
+	}
+
+	/**
+	 * Returns the strong redstone power emitted by this block toward the given face.
+	 * Strong power can power a block directly, enabling it to power adjacent components.
+	 *
+	 * @return int 0-15
+	 */
+	public function getStrongRedstonePower(int $face) : int{
+		return 0;
+	}
+
+	/**
 	 * Returns whether this block blocks direct sky light from passing through it. This is independent from the light
 	 * filter value, which is used during propagation.
 	 *
