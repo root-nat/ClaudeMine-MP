@@ -24,15 +24,18 @@ declare(strict_types=1);
 namespace pocketmine\block\utils;
 
 use pocketmine\block\Block;
+use pocketmine\color\Color;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Axe;
 use pocketmine\item\Item;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\world\particle\DustParticle;
 use pocketmine\world\sound\CopperWaxApplySound;
 use pocketmine\world\sound\CopperWaxRemoveSound;
 use pocketmine\world\sound\ScrapeSound;
+use function mt_rand;
 
 trait CopperTrait{
 	private CopperOxidation $oxidation = CopperOxidation::NONE;
@@ -66,9 +69,12 @@ trait CopperTrait{
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
 		if(!$this->waxed && $item->getTypeId() === ItemTypeIds::HONEYCOMB){
 			$this->waxed = true;
-			$this->position->getWorld()->setBlock($this->position, $this);
-			//TODO: orange particles are supposed to appear when applying wax
-			$this->position->getWorld()->addSound($this->position, new CopperWaxApplySound());
+			$world = $this->position->getWorld();
+			$world->setBlock($this->position, $this);
+			for($i = 0; $i < 5; $i++){
+				$world->addParticle($this->position->add(mt_rand(0, 100) / 100, mt_rand(0, 100) / 100, mt_rand(0, 100) / 100), new DustParticle(new Color(255, 166, 0)));
+			}
+			$world->addSound($this->position, new CopperWaxApplySound());
 			$item->pop();
 			return true;
 		}
@@ -76,9 +82,12 @@ trait CopperTrait{
 		if($item instanceof Axe){
 			if($this->waxed){
 				$this->waxed = false;
-				$this->position->getWorld()->setBlock($this->position, $this);
-				//TODO: white particles are supposed to appear when removing wax
-				$this->position->getWorld()->addSound($this->position, new CopperWaxRemoveSound());
+				$world = $this->position->getWorld();
+				$world->setBlock($this->position, $this);
+				for($i = 0; $i < 5; $i++){
+					$world->addParticle($this->position->add(mt_rand(0, 100) / 100, mt_rand(0, 100) / 100, mt_rand(0, 100) / 100), new DustParticle(new Color(224, 224, 224)));
+				}
+				$world->addSound($this->position, new CopperWaxRemoveSound());
 				$item->applyDamage(1);
 				return true;
 			}
@@ -86,9 +95,12 @@ trait CopperTrait{
 			$previousOxidation = $this->oxidation->getPrevious();
 			if($previousOxidation !== null){
 				$this->oxidation = $previousOxidation;
-				$this->position->getWorld()->setBlock($this->position, $this);
-				//TODO: turquoise particles are supposed to appear when removing oxidation
-				$this->position->getWorld()->addSound($this->position, new ScrapeSound());
+				$world = $this->position->getWorld();
+				$world->setBlock($this->position, $this);
+				for($i = 0; $i < 5; $i++){
+					$world->addParticle($this->position->add(mt_rand(0, 100) / 100, mt_rand(0, 100) / 100, mt_rand(0, 100) / 100), new DustParticle(new Color(45, 180, 130)));
+				}
+				$world->addSound($this->position, new ScrapeSound());
 				$item->applyDamage(1);
 				return true;
 			}

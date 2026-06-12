@@ -28,6 +28,7 @@ use pocketmine\block\utils\HorizontalFacingTrait;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
 use pocketmine\math\Axis;
+use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
@@ -62,13 +63,66 @@ class TripwireHook extends Flowable implements HorizontalFacing{
 	}
 
 	public function place(BlockTransaction $tx, Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, ?Player $player = null) : bool{
-		if(Facing::axis($face) !== Axis::Y){
-			//TODO: check face is valid
+		if(Facing::axis($face) !== Axis::Y && $blockReplace->getSide(Facing::opposite($face))->isSolid()){
 			$this->facing = $face;
 			return parent::place($tx, $item, $blockReplace, $blockClicked, $face, $clickVector, $player);
 		}
 		return false;
 	}
 
-	//TODO
+	public function onNearbyBlockChange() : void{
+		$connected = $this->hasConnectedHook();
+		if($connected !== $this->connected){
+			$this->connected = $connected;
+			if(!$connected && $this->powered){
+				$this->powered = false;
+			}
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
+	}
+
+	public function onScheduledUpdate() : void{
+		if(!$this->powered){
+			return;
+		}
+		$world = $this->position->getWorld();
+		for($i = 1; $i <= 40; $i++){
+			$wirePos = $this->position->getSide($this->facing, $i);
+			$wire = $world->getBlock($wirePos);
+			if($wire instanceof self){
+				break;
+			}
+			if(!($wire instanceof Tripwire)){
+				break;
+			}
+			$bb = new AxisAlignedBB($wirePos->x, $wirePos->y, $wirePos->z, $wirePos->x + 1, $wirePos->y + 1, $wirePos->z + 1);
+			if(!empty($world->getNearbyEntities($bb))){
+				$world->scheduleDelayedBlockUpdate($this->position, 5);
+				return;
+			}
+		}
+		$this->powered = false;
+		$world->setBlock($this->position, $this);
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->powered ? 15 : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return ($this->powered && $face === Facing::opposite($this->facing)) ? 15 : 0;
+	}
+
+	private function hasConnectedHook() : bool{
+		for($i = 1; $i <= 40; $i++){
+			$block = $this->getSide($this->facing, $i);
+			if($block instanceof self && $block->getFacing() === Facing::opposite($this->facing)){
+				return true;
+			}
+			if(!($block instanceof Tripwire)){
+				return false;
+			}
+		}
+		return false;
+	}
 }

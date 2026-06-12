@@ -26,7 +26,6 @@ namespace pocketmine\block;
 use pocketmine\block\utils\BlockEventHelper;
 use pocketmine\block\utils\DirtType;
 use pocketmine\item\Item;
-use pocketmine\math\Facing;
 use function mt_rand;
 
 class Mycelium extends Opaque{
@@ -46,16 +45,18 @@ class Mycelium extends Opaque{
 	}
 
 	public function onRandomTick() : void{
-		//TODO: light levels
 		$x = mt_rand($this->position->x - 1, $this->position->x + 1);
 		$y = mt_rand($this->position->y - 2, $this->position->y + 2);
 		$z = mt_rand($this->position->z - 1, $this->position->z + 1);
 		$world = $this->position->getWorld();
 		$block = $world->getBlockAt($x, $y, $z);
-		if($block instanceof Dirt && $block->getDirtType() === DirtType::NORMAL){
-			if($block->getSide(Facing::UP) instanceof Transparent){
-				BlockEventHelper::spread($block, VanillaBlocks::MYCELIUM(), $this);
-			}
+		if(
+			$block instanceof Dirt &&
+			$block->getDirtType() === DirtType::NORMAL &&
+			$world->getFullLightAt($x, $y + 1, $z) >= 4 &&
+			$world->getBlockAt($x, $y + 1, $z)->getLightFilter() < 2
+		){
+			BlockEventHelper::spread($block, VanillaBlocks::MYCELIUM(), $this);
 		}
 	}
 }

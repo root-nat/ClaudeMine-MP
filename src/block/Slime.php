@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\entity\Entity;
 use pocketmine\entity\Living;
+use pocketmine\math\Vector3;
 
 final class Slime extends Transparent{
 
@@ -40,5 +41,12 @@ final class Slime extends Transparent{
 		return -$entity->getMotion()->y;
 	}
 
-	//TODO: slime blocks should slow entities walking on them to about 0.4x original speed
+	public function onEntityInside(Entity $entity) : bool{
+		if($entity instanceof Living && $entity->isSneaking()){
+			return true;
+		}
+		$motion = $entity->getMotion();
+		$entity->setMotion(new Vector3($motion->x * 0.4, $motion->y, $motion->z * 0.4));
+		return true;
+	}
 }

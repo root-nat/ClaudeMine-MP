@@ -24,8 +24,10 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\entity\Entity;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
+use pocketmine\math\Facing;
 
 class Tripwire extends Flowable{
 	protected bool $triggered = false;
@@ -70,6 +72,31 @@ class Tripwire extends Flowable{
 	public function setDisarmed(bool $disarmed) : self{
 		$this->disarmed = $disarmed;
 		return $this;
+	}
+
+	public function hasEntityCollision() : bool{
+		return true;
+	}
+
+	public function onEntityInside(Entity $entity) : bool{
+		$world = $this->position->getWorld();
+		foreach(Facing::HORIZONTAL as $face){
+			for($i = 1; $i <= 40; $i++){
+				$block = $this->getSide($face, $i);
+				if($block instanceof TripwireHook && $block->getFacing() === Facing::opposite($face)){
+					if(!$block->isPowered()){
+						$newHook = (clone $block)->setPowered(true)->setConnected(true);
+						$world->setBlock($block->getPosition(), $newHook);
+						$world->scheduleDelayedBlockUpdate($block->getPosition(), 5);
+					}
+					break;
+				}
+				if(!($block instanceof self)){
+					break;
+				}
+			}
+		}
+		return true;
 	}
 
 	public function asItem() : Item{

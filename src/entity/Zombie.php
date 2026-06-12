@@ -33,7 +33,7 @@ class Zombie extends Living{
 	public static function getNetworkTypeId() : string{ return EntityIds::ZOMBIE; }
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{
-		return new EntitySizeInfo(1.9, 0.6); //TODO: eye height ??
+		return new EntitySizeInfo(1.9, 0.6, 1.74);
 	}
 
 	public function getName() : string{
@@ -63,8 +63,11 @@ class Zombie extends Living{
 	}
 
 	public function getXpDropAmount() : int{
-		//TODO: check for equipment and whether it's a baby
-		return 5;
+		$xp = 5;
+		foreach($this->armorInventory->getContents() as $item){
+			$xp += mt_rand(1, 3);
+		}
+		return $xp;
 	}
 
 	public function getPickedItem() : ?Item{

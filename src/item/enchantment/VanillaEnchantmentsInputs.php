@@ -173,6 +173,33 @@ final class VanillaEnchantmentsInputs extends RegistrySource{
 			fn(int $level) : int => $level * 7 + 5,
 			5
 		));
+		self::register("CHANNELING", new Enchantment(
+			KnownTranslationFactory::enchantment_tridentChanneling(),
+			Rarity::RARE,
+			0,
+			0,
+			1,
+			fn(int $level) : int => 25,
+			25
+		));
+		self::register("RIPTIDE", new Enchantment(
+			KnownTranslationFactory::enchantment_tridentRiptide(),
+			Rarity::RARE,
+			0,
+			0,
+			3,
+			fn(int $level) : int => 7 * ($level - 1) + 17,
+			15
+		));
+		self::register("IMPALING", new Enchantment(
+			KnownTranslationFactory::enchantment_tridentImpaling(),
+			Rarity::RARE,
+			0,
+			0,
+			5,
+			fn(int $level) : int => 8 * ($level - 1) + 1,
+			20
+		));
 		self::register("FIRE_ASPECT", new FireAspectEnchantment(
 			KnownTranslationFactory::enchantment_fire(),
 			Rarity::RARE,

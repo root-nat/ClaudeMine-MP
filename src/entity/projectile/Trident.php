@@ -38,6 +38,7 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\player\Player;
+use pocketmine\item\enchantment\VanillaEnchantments;
 use pocketmine\world\sound\TridentHitBlockSound;
 use pocketmine\world\sound\TridentHitEntitySound;
 
@@ -55,6 +56,9 @@ class Trident extends Projectile{
 	protected bool $canCollide = true;
 
 	protected bool $spawnedInCreative = false;
+
+	private int $loyaltyReturnTimer = 0;
+	private bool $loyaltyReturning = false;
 
 	public function __construct(
 		Location $location,
@@ -99,7 +103,33 @@ class Trident extends Projectile{
 		if($this->closed){
 			return false;
 		}
-		//TODO: Loyalty enchantment.
+
+		$loyaltyLevel = $this->item->getEnchantmentLevel(VanillaEnchantments::LOYALTY());
+
+		if($this->loyaltyReturning){
+			$owner = $this->getOwningEntity();
+			if($owner instanceof Player){
+				$targetPos = $owner->getEyePos();
+				$diff = $targetPos->subtractVector($this->position);
+				if($diff->length() > 0.5){
+					$speed = 0.5 + $loyaltyLevel * 0.25;
+					$this->setMotion($diff->normalize()->multiply($speed));
+				}
+			} else {
+				$this->flagForDespawn();
+			}
+		} elseif($this->blockHit !== null && $loyaltyLevel > 0){
+			$this->loyaltyReturnTimer += $tickDiff;
+			if($this->loyaltyReturnTimer >= (4 - $loyaltyLevel) * 10){
+				$owner = $this->getOwningEntity();
+				if($owner instanceof Player){
+					$this->blockHit = null;
+					$this->loyaltyReturning = true;
+					$this->loyaltyReturnTimer = 0;
+					$this->canCollide = false;
+				}
+			}
+		}
 
 		return parent::entityBaseTick($tickDiff);
 	}
@@ -109,8 +139,15 @@ class Trident extends Projectile{
 	}
 
 	protected function onHitEntity(Entity $entityHit, RayTraceResult $hitResult) : void{
-		parent::onHitEntity($entityHit, $hitResult);
-
+		$impalingLevel = $this->item->getEnchantmentLevel(VanillaEnchantments::IMPALING());
+		if($impalingLevel > 0 && $entityHit->isUnderwater()){
+			$oldDamage = $this->damage;
+			$this->damage += $impalingLevel * 2.5;
+			parent::onHitEntity($entityHit, $hitResult);
+			$this->damage = $oldDamage;
+		} else {
+			parent::onHitEntity($entityHit, $hitResult);
+		}
 		$this->canCollide = false;
 		$this->broadcastSound(new TridentHitEntitySound());
 		$this->setMotion(new Vector3($this->motion->x * -0.01, $this->motion->y * -0.1, $this->motion->z * -0.01));
@@ -141,7 +178,7 @@ class Trident extends Projectile{
 	}
 
 	public function onCollideWithPlayer(Player $player) : void{
-		if($this->blockHit !== null){
+		if($this->blockHit !== null || $this->loyaltyReturning){
 			$this->pickup($player);
 		}
 	}

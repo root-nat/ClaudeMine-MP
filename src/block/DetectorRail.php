@@ -24,6 +24,8 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\entity\Entity;
+use pocketmine\math\AxisAlignedBB;
 
 class DetectorRail extends StraightOnlyRail{
 	protected bool $activated = false;
@@ -40,5 +42,35 @@ class DetectorRail extends StraightOnlyRail{
 		$this->activated = $activated;
 		return $this;
 	}
-	//TODO
+
+	public function hasEntityCollision() : bool{
+		return true;
+	}
+
+	public function onEntityInside(Entity $entity) : bool{
+		if(!$this->activated){
+			$this->activated = true;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
+		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 20);
+		return false;
+	}
+
+	public function onScheduledUpdate() : void{
+		$world = $this->position->getWorld();
+		$pos = $this->position;
+		$bb = new AxisAlignedBB($pos->x, $pos->y, $pos->z, $pos->x + 1, $pos->y + 1, $pos->z + 1);
+		if(!empty($world->getNearbyEntities($bb))){
+			$world->scheduleDelayedBlockUpdate($this->position, 20);
+			return;
+		}
+		if($this->activated){
+			$this->activated = false;
+			$world->setBlock($this->position, $this);
+		}
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->activated ? 15 : 0;
+	}
 }

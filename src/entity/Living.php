@@ -28,6 +28,7 @@ use pocketmine\block\BlockTypeIds;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\block\Water;
 use pocketmine\data\bedrock\EffectIdMap;
+use pocketmine\data\bedrock\item\SavedItemStackData;
 use pocketmine\entity\animation\DeathAnimation;
 use pocketmine\entity\animation\HurtAnimation;
 use pocketmine\entity\animation\RespawnAnimation;
@@ -107,9 +108,11 @@ abstract class Living extends Entity{
 	private const TAG_EFFECT_DURATION = "Duration"; //TAG_Int
 	private const TAG_EFFECT_AMPLIFIER = "Amplifier"; //TAG_Byte
 	private const TAG_EFFECT_SHOW_PARTICLES = "ShowParticles"; //TAG_Byte
+	private const TAG_ARMOR = "Armor"; //TAG_List<TAG_Compound>
 	private const TAG_EFFECT_AMBIENT = "Ambient"; //TAG_Byte
 
 	protected int $attackTime = 0;
+	private ?int $lastPlayerDamageTick = null;
 
 	public int $deadTicks = 0;
 	protected int $maxDeadTicks = 25;
@@ -154,7 +157,19 @@ abstract class Living extends Entity{
 		$this->effectManager->getEffectRemoveHooks()->add(function() : void{ $this->networkPropertiesDirty = true; });
 
 		$this->armorInventory = new ArmorInventory($this);
-		//TODO: load/save armor inventory contents
+		if(!($this instanceof Human)){
+			$armorTag = $nbt->getListTag(self::TAG_ARMOR);
+			if($armorTag !== null){
+				foreach($armorTag as $itemTag){
+					if($itemTag instanceof CompoundTag){
+						$slot = $itemTag->getByte(SavedItemStackData::TAG_SLOT, 0);
+						if($slot >= 0 && $slot < $this->armorInventory->getSize()){
+							$this->armorInventory->setItem($slot, Item::safeNbtDeserialize($itemTag, "Living armor slot $slot"));
+						}
+					}
+				}
+			}
+		}
 		$this->armorInventory->getListeners()->add(CallbackInventoryListener::onAnyChange(fn() => NetworkBroadcastUtils::broadcastEntityEvent(
 			$this->getViewers(),
 			fn(EntityEventBroadcaster $broadcaster, array $recipients) => $broadcaster->onMobArmorChange($recipients, $this)
@@ -253,6 +268,13 @@ abstract class Living extends Entity{
 	}
 
 	public function setSneaking(bool $value = true) : void{
+		if($value !== $this->sneaking){
+			$swiftSneakLevel = $this->armorInventory->getLeggings()->getEnchantmentLevel(VanillaEnchantments::SWIFT_SNEAK());
+			$sneakFactor = 0.3 + $swiftSneakLevel * 0.15;
+			$moveSpeed = $this->getMovementSpeed();
+			$this->setMovementSpeed($value ? ($moveSpeed * $sneakFactor) : ($moveSpeed / $sneakFactor));
+			$this->moveSpeedAttr->markSynchronized(false);
+		}
 		$this->sneaking = $value;
 		$this->networkPropertiesDirty = true;
 		$this->recalculateSize();
@@ -330,6 +352,19 @@ abstract class Living extends Entity{
 			}
 
 			$nbt->setTag(self::TAG_ACTIVE_EFFECTS, new ListTag($effects));
+		}
+
+		if(!($this instanceof Human)){
+			$armorItems = [];
+			for($slot = 0; $slot < $this->armorInventory->getSize(); $slot++){
+				$item = $this->armorInventory->getItem($slot);
+				if(!$item->isNull()){
+					$armorItems[] = $item->nbtSerialize($slot);
+				}
+			}
+			if(count($armorItems) > 0){
+				$nbt->setTag(self::TAG_ARMOR, new ListTag($armorItems));
+			}
 		}
 
 		return $nbt;
@@ -581,6 +616,10 @@ abstract class Living extends Entity{
 			return;
 		}
 
+		if($source instanceof EntityDamageByEntityEvent && $source->getDamager() instanceof Player){
+			$this->lastPlayerDamageTick = $this->ticksLived;
+		}
+
 		if($this->attackTime <= 0){
 			//this logic only applies if the entity was cold attacked
 
@@ -646,8 +685,9 @@ abstract class Living extends Entity{
 			$this->getWorld()->dropItem($this->location, $item);
 		}
 
-		//TODO: check death conditions (must have been damaged by player < 5 seconds from death)
-		$this->getWorld()->dropExperience($this->location, $ev->getXpDropAmount());
+		if($this->lastPlayerDamageTick !== null && ($this->ticksLived - $this->lastPlayerDamageTick) <= 100){
+			$this->getWorld()->dropExperience($this->location, $ev->getXpDropAmount());
+		}
 
 		$this->startDeathAnimation();
 	}
