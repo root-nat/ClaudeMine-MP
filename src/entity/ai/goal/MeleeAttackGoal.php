@@ -112,8 +112,13 @@ final class MeleeAttackGoal extends BaseGoal{
 			return;
 		}
 		if($intent->hasMovement()){
-			$force = MovementForce::computeForce(max(0.01, $mob->getMovementSpeed()));
-			$mob->addMotion($intent->dirX * $force, 0, $intent->dirZ * $force);
+			$targetSpeed = max(0.01, $mob->getMovementSpeed());
+			$motion = $mob->getMotion();
+			$forward = $motion->x * $intent->dirX + $motion->z * $intent->dirZ;
+			$force = MovementForce::accelerationForce($targetSpeed, $forward);
+			if($force > 0.0){
+				$mob->addMotion($intent->dirX * $force, 0, $intent->dirZ * $force);
+			}
 		}
 		if($intent->jump){
 			$mob->jump();

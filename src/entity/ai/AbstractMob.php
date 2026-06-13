@@ -36,6 +36,7 @@ use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\nbt\tag\CompoundTag;
+use function abs;
 use function count;
 use function mt_getrandmax;
 use function mt_rand;
@@ -127,6 +128,22 @@ abstract class AbstractMob extends Living implements MobContext{
 	public function getMovementSpeed() : float{
 		$attr = $this->getAttributeMap()->get(Attribute::MOVEMENT_SPEED);
 		return $attr !== null ? $attr->getValue() : 0.25;
+	}
+
+	/**
+	 * Maximum degrees the body may turn per tick when facing the movement direction. Override for faster/slower turners.
+	 */
+	protected function getMaxYawTurnPerTick() : float{
+		return 30.0;
+	}
+
+	public function setMoveDirection(float $dx, float $dz) : void{
+		if(abs($dx) < 1e-4 && abs($dz) < 1e-4){
+			return;
+		}
+		$targetYaw = RotationHelper::directionToYaw($dx, $dz);
+		$newYaw = RotationHelper::turnTowards($this->location->yaw, $targetYaw, $this->getMaxYawTurnPerTick());
+		$this->setRotation($newYaw, $this->location->pitch);
 	}
 
 	public function getNodeAccess() : NodeAccess{

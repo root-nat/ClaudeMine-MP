@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\block\utils\SupportType;
+use pocketmine\block\utils\WallConnectionResolver;
 use pocketmine\block\utils\WallConnectionType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\math\Axis;
@@ -95,30 +96,45 @@ class Wall extends Transparent{
 	}
 
 	protected function recalculateConnections() : bool{
-		$changed = 0;
+		$above = $this->getSide(Facing::UP);
+		$aboveFullSupport = $above->getSupportType(Facing::DOWN) === SupportType::FULL;
+		//A full solid block OR another wall stacked on top raises the side connections to full height, so a multi-block
+		//wall reads as a solid panel instead of leaving gaps between the columns. A wall's own support type is only
+		//CENTER, so stacked walls must be detected explicitly here.
+		$aboveCoversTop = $above instanceof Wall || $aboveFullSupport;
+		//Anything resting on the wall centre forces a post (vanilla: torches, pressure plates, signs, banners, tripwire,
+		//full blocks, or a wall that is itself a post). The ONE exception is a plain (straight) wall stacked on top: it must
+		//NOT force a post, otherwise every block of a stacked wall becomes a thick pillar instead of a flat panel. So a post
+		//is forced by any non-air block above, unless that block is a wall without its own post.
+		$aboveForcesPost = $above->getTypeId() !== BlockTypeIds::AIR && (!($above instanceof Wall) || $above->isPost());
 
-		//TODO: implement tall/short connections - right now we only support short as per pre-1.16
-
+		$connected = [];
 		foreach(Facing::HORIZONTAL as $facing){
 			$block = $this->getSide($facing);
-			if($block instanceof static || $block instanceof FenceGate || $block instanceof Thin || $block->getSupportType(Facing::opposite($facing)) === SupportType::FULL){
-				if(!isset($this->connections[$facing])){
-					$this->connections[$facing] = WallConnectionType::SHORT;
-					$changed++;
+			$connected[$facing] =
+				$block instanceof static ||
+				$block instanceof FenceGate ||
+				$block instanceof Thin ||
+				$block->getSupportType(Facing::opposite($facing)) === SupportType::FULL;
+		}
+
+		[$connections, $post] = WallConnectionResolver::resolve($connected, $aboveCoversTop, $aboveForcesPost);
+
+		$changed = $post !== $this->post;
+		if(!$changed){
+			foreach(Facing::HORIZONTAL as $facing){
+				if(($connections[$facing] ?? null) !== ($this->connections[$facing] ?? null)){
+					$changed = true;
+					break;
 				}
-			}elseif(isset($this->connections[$facing])){
-				unset($this->connections[$facing]);
-				$changed++;
 			}
 		}
-
-		$up = $this->getSide(Facing::UP)->getTypeId() !== BlockTypeIds::AIR;
-		if($up !== $this->post){
-			$this->post = $up;
-			$changed++;
+		if($changed){
+			$this->connections = $connections;
+			$this->post = $post;
 		}
 
-		return $changed > 0;
+		return $changed;
 	}
 
 	protected function recalculateCollisionBoxes() : array{

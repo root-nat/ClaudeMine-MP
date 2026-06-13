@@ -95,8 +95,14 @@ final class RangedAttackGoal extends BaseGoal{
 			$dz = $pos->z - $target->z;
 			$length = sqrt(($dx * $dx) + ($dz * $dz));
 			if($length > 1e-4){
-				$force = MovementForce::computeForce(max(0.01, $mob->getMovementSpeed()));
-				$mob->addMotion(($dx / $length) * $force, 0, ($dz / $length) * $force);
+				$dirX = $dx / $length;
+				$dirZ = $dz / $length;
+				$motion = $mob->getMotion();
+				$forward = $motion->x * $dirX + $motion->z * $dirZ;
+				$force = MovementForce::accelerationForce(max(0.01, $mob->getMovementSpeed()), $forward);
+				if($force > 0.0){
+					$mob->addMotion($dirX * $force, 0, $dirZ * $force);
+				}
 			}
 		}elseif($distance > $this->shootRange){
 			//too far: approach via pathfinding
@@ -108,8 +114,12 @@ final class RangedAttackGoal extends BaseGoal{
 			$this->navigator->setPath($path);
 			$intent = $this->navigator->tick($pos);
 			if($intent->hasMovement()){
-				$force = MovementForce::computeForce(max(0.01, $mob->getMovementSpeed()));
-				$mob->addMotion($intent->dirX * $force, 0, $intent->dirZ * $force);
+				$motion = $mob->getMotion();
+				$forward = $motion->x * $intent->dirX + $motion->z * $intent->dirZ;
+				$force = MovementForce::accelerationForce(max(0.01, $mob->getMovementSpeed()), $forward);
+				if($force > 0.0){
+					$mob->addMotion($intent->dirX * $force, 0, $intent->dirZ * $force);
+				}
 			}
 			if($intent->jump){
 				$mob->jump();

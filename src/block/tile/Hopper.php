@@ -33,8 +33,6 @@ class Hopper extends Spawnable implements Container, Nameable{
 	use ContainerTrait;
 	use NameableTrait;
 
-	public const TRANSFER_COOLDOWN_TICKS = 8;
-
 	private const TAG_TRANSFER_COOLDOWN = "TransferCooldown";
 
 	private HopperInventory $inventory;
@@ -43,7 +41,9 @@ class Hopper extends Spawnable implements Container, Nameable{
 	public function __construct(World $world, Vector3 $pos){
 		parent::__construct($world, $pos);
 		$this->inventory = new HopperInventory($this->position);
-		$world->scheduleDelayedBlockUpdate($this->position, self::TRANSFER_COOLDOWN_TICKS);
+		//restart the transfer loop when the tile is (re)created, e.g. after a chunk load, so saved hoppers keep ticking.
+		//deduplicated against the block's own scheduling by World::scheduleDelayedBlockUpdate.
+		$world->scheduleDelayedBlockUpdate($this->position, 1);
 	}
 
 	public function readSaveData(CompoundTag $nbt) : void{
@@ -78,5 +78,13 @@ class Hopper extends Spawnable implements Container, Nameable{
 
 	public function getRealInventory() : HopperInventory{
 		return $this->inventory;
+	}
+
+	public function getTransferCooldown() : int{
+		return $this->transferCooldown;
+	}
+
+	public function setTransferCooldown(int $cooldown) : void{
+		$this->transferCooldown = $cooldown;
 	}
 }

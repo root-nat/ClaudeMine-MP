@@ -52,6 +52,13 @@ interface MobContext{
 
 	public function lookAt(Vector3 $target) : void;
 
+	/**
+	 * Rotates the mob to face the horizontal direction it is moving in (body + head). Movement goals call this each tick
+	 * so a walking mob turns to face its path instead of sliding sideways. No-ops for a zero vector. Implementations turn
+	 * at a capped rate for a natural turn.
+	 */
+	public function setMoveDirection(float $dx, float $dz) : void;
+
 	public function isOnGround() : bool;
 
 	/**

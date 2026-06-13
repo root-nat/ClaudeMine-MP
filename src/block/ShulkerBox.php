@@ -26,6 +26,7 @@ namespace pocketmine\block;
 use pocketmine\block\tile\ShulkerBox as TileShulkerBox;
 use pocketmine\block\utils\AnyFacing;
 use pocketmine\block\utils\AnyFacingTrait;
+use pocketmine\block\utils\HopperInteractableContainerTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
@@ -33,8 +34,9 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 
-class ShulkerBox extends Opaque implements AnyFacing{
+class ShulkerBox extends Opaque implements AnyFacing, HopperInteractable{
 	use AnyFacingTrait;
+	use HopperInteractableContainerTrait;
 
 	protected function describeBlockOnlyState(RuntimeDataDescriber $w) : void{
 		//NOOP - we don't read or write facing here, because the tile persists it

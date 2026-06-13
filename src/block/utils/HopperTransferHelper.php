@@ -24,23 +24,42 @@ declare(strict_types=1);
 namespace pocketmine\block\utils;
 
 use pocketmine\inventory\Inventory;
-use pocketmine\item\VanillaItems;
+use pocketmine\item\Item;
 
-final class HopperTransferHelper{
+class HopperTransferHelper{
+	/**
+	 * Find one item from the source inventory and transfer it to the target inventory.
+	 * Check the items from the start to the end of the inventory.
+	 * Returns true if an item was transferred, false otherwise.
+	 */
+	public static function transferOneItem(Inventory $sourceInventory, Inventory $targetInventory) : bool{
+		foreach($sourceInventory->getContents() as $item){
+			if(self::transferSpecificItem($sourceInventory, $targetInventory, $item)){
+				return true;
+			}
+		}
 
-	private function __construct(){
+		return false;
 	}
 
-	public static function transferOneItem(Inventory $source, Inventory $destination) : bool{
-		foreach($source->getContents() as $slot => $item){
-			$single = $item->pop();
-			if(!$destination->canAddItem($single)){
-				continue;
-			}
-			$destination->addItem($single);
-			$source->setItem($slot, $item->getCount() > 0 ? $item : VanillaItems::AIR());
-			return true;
+	/**
+	 * Transfer the one of the specified item from the source inventory to the target inventory.
+	 * Returns true if the item was transferred, false otherwise.
+	 */
+	public static function transferSpecificItem(Inventory $sourceInventory, Inventory $targetInventory, Item $item) : bool{
+		if($item->isNull()){
+			return false;
 		}
-		return false;
+
+		$singleItem = $item->pop();
+
+		if(!$targetInventory->canAddItem($singleItem)){
+			return false;
+		}
+
+		$sourceInventory->removeItem($singleItem);
+		$targetInventory->addItem($singleItem);
+
+		return true;
 	}
 }

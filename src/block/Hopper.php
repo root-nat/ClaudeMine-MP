@@ -23,7 +23,6 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
-use pocketmine\block\tile\Container;
 use pocketmine\block\tile\Hopper as TileHopper;
 use pocketmine\block\utils\HopperTransferHelper;
 use pocketmine\block\utils\PoweredByRedstone;
@@ -31,22 +30,55 @@ use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\entity\object\ItemEntity;
+use pocketmine\event\block\HopperActionEvent;
+use pocketmine\event\block\HopperPickupItemEvent;
+use pocketmine\inventory\Inventory;
 use pocketmine\item\Item;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
-use pocketmine\world\World;
+use function assert;
+use function count;
+use function max;
+use function min;
 
-class Hopper extends Transparent implements PoweredByRedstone{
+class Hopper extends Transparent implements HopperInteractable, PoweredByRedstone{
 	use PoweredByRedstoneTrait;
 
+	public const TRANSFER_COOLDOWN = 8;
+	public const ENTITY_PICKUP_COOLDOWN = 8;
+
+	public const TRANSFER_PER_ACTION = 1;
+
+	public const ENTITY_PICKUP_PER_ACTION = 1;
+
 	private int $facing = Facing::DOWN;
+
+	private int $lastTransferActionTick = 0;
+	private int $lastEntityPickupTick = 0;
+	private AxisAlignedBB $pickingBox;
 
 	protected function describeBlockOnlyState(RuntimeDataDescriber $w) : void{
 		$w->facingExcept($this->facing, Facing::UP);
 		$w->bool($this->powered);
+	}
+
+	public function readStateFromWorld() : Block{
+		parent::readStateFromWorld();
+		$tile = $this->position->getWorld()->getTile($this->position);
+		if($tile instanceof TileHopper){
+			$this->lastTransferActionTick = $this->position->getWorld()->getServer()->getTick() - $tile->getTransferCooldown();
+		}
+		return $this;
+	}
+
+	public function writeStateToWorld() : void{
+		parent::writeStateToWorld();
+		$tile = $this->position->getWorld()->getTile($this->position);
+		assert($tile instanceof TileHopper);
+		$tile->setTransferCooldown($this->position->getWorld()->getServer()->getTick() - $this->lastTransferActionTick);
 	}
 
 	public function getFacing() : int{ return $this->facing; }
@@ -62,10 +94,10 @@ class Hopper extends Transparent implements PoweredByRedstone{
 
 	protected function recalculateCollisionBoxes() : array{
 		$result = [
-			AxisAlignedBB::one()->trim(Facing::UP, 6 / 16) //the empty area around the bottom is currently considered solid
+			AxisAlignedBB::one()->trim(Facing::UP, 6 / 16)
 		];
 
-		foreach(Facing::HORIZONTAL as $f){ //add the frame parts around the bowl
+		foreach(Facing::HORIZONTAL as $f){
 			$result[] = AxisAlignedBB::one()->trim($f, 14 / 16);
 		}
 		return $result;
@@ -82,13 +114,26 @@ class Hopper extends Transparent implements PoweredByRedstone{
 	public function place(BlockTransaction $tx, Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, ?Player $player = null) : bool{
 		$this->facing = $face === Facing::DOWN ? Facing::DOWN : Facing::opposite($face);
 
+		$world = $this->position->getWorld();
+		$this->updateTransferCooldown();
+		$this->updateEntityPickingCooldown();
+		$world->scheduleDelayedBlockUpdate($this->position, $this->getNextTickUpdate());
+
 		return parent::place($tx, $item, $blockReplace, $blockClicked, $face, $clickVector, $player);
+	}
+
+	public function onNearbyBlockChange() : void{
+		$powered = $this->isReceivingRedstonePower();
+		if($powered !== $this->powered){
+			$this->powered = $powered;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
 	}
 
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
 		if($player !== null){
 			$tile = $this->position->getWorld()->getTile($this->position);
-			if($tile instanceof TileHopper){ //TODO: find a way to have inventories open on click without this boilerplate in every block
+			if($tile instanceof TileHopper){
 				$player->setCurrentWindow($tile->getInventory());
 			}
 			return true;
@@ -96,68 +141,190 @@ class Hopper extends Transparent implements PoweredByRedstone{
 		return false;
 	}
 
-	public function onPostPlace() : void{
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, TileHopper::TRANSFER_COOLDOWN_TICKS);
-	}
-
-	public function onNearbyBlockChange() : void{
-		$world = $this->position->getWorld();
-		$powered = $this->isReceivingRedstonePower();
-		if($powered !== $this->powered){
-			$this->powered = $powered;
-			$world->setBlock($this->position, $this);
+	protected function transferMultiple(Inventory $from, Inventory $to, int $count) : bool{
+		$moved = false;
+		$count = max(0, $count);
+		for($i = 0; $i < $count; $i++){
+			if(!HopperTransferHelper::transferOneItem($from, $to)){
+				break;
+			}
+			$moved = true;
 		}
-		$world->scheduleDelayedBlockUpdate($this->position, 1);
+		return $moved;
 	}
 
 	public function onScheduledUpdate() : void{
 		$world = $this->position->getWorld();
-		$tile = $world->getTile($this->position);
-		if(!$tile instanceof TileHopper){
-			return;
-		}
 
-		if(!$this->powered){
-			$this->pushItems($world, $tile);
-			if(!$this->pullItems($world, $tile)){
-				$this->pickupItems($world, $tile);
+		if (!$this->powered && !$this->isTransferInCooldown()) {
+			$facingBlock = $this->getSide($this->facing);
+			$pushSuccess = false;
+
+			$ev = new HopperActionEvent($this, $facingBlock, HopperActionEvent::ACTION_PUSH);
+			$ev->call();
+			if (!$ev->isCancelled() && $facingBlock instanceof HopperInteractable) {
+				for ($i = 0; $i < static::TRANSFER_PER_ACTION; $i++) {
+					if (!$facingBlock->doHopperPush($this)) {
+						break;
+					}
+					$pushSuccess = true;
+				}
+			}
+
+			$topBlock = $this->getSide(Facing::UP);
+			$pullSuccess = false;
+
+			$ev = new HopperActionEvent($this, $topBlock, HopperActionEvent::ACTION_PULL);
+			$ev->call();
+			if (!$ev->isCancelled() && $topBlock instanceof HopperInteractable) {
+				for ($i = 0; $i < static::TRANSFER_PER_ACTION; $i++) {
+					if (!$topBlock->doHopperPull($this)) {
+						break;
+					}
+					$pullSuccess = true;
+				}
+			}
+
+			if ($pushSuccess || $pullSuccess) {
+				$this->updateTransferCooldown();
 			}
 		}
 
-		$world->scheduleDelayedBlockUpdate($this->position, TileHopper::TRANSFER_COOLDOWN_TICKS);
+		if (!$this->powered && !$this->isEntityPickingInCooldown()) {
+			$currentTile = $world->getTile($this->position);
+			if (!$currentTile instanceof TileHopper) {
+				return;
+			}
+
+			foreach ($world->getNearbyEntities($this->getPickingBox()) as $entity) {
+				if (!$entity instanceof ItemEntity) {
+					continue;
+				}
+
+				if (HopperPickupItemEvent::hasHandlers()) {
+					$ev = new HopperPickupItemEvent($entity, $this);
+					$ev->call();
+					if ($ev->isCancelled()) {
+						continue;
+					}
+				}
+
+				$stack = $entity->getItem();
+				if ($stack->getCount() <= 0) {
+					continue;
+				}
+
+				$toInsert = clone $stack;
+				$ret = $currentTile->getInventory()->addItem($toInsert);
+
+				if (count($ret) > 0) {
+					$remaining = 0;
+					foreach ($ret as $left) {
+						$remaining += $left->getCount();
+					}
+					$entity->setStackSize($remaining);
+				} else {
+					$entity->flagForDespawn();
+				}
+
+				$this->updateEntityPickingCooldown();
+				break;
+			}
+		}
+
+		$world->scheduleDelayedBlockUpdate($this->position, $this->getNextTickUpdate());
 	}
 
-	private function pushItems(World $world, TileHopper $tile) : bool{
-		$destination = $world->getTile($this->position->getSide($this->facing));
-		if(!$destination instanceof Container){
+	public function doHopperPush(Hopper $hopperBlock) : bool{
+		if($this->isTransferInCooldown()){
 			return false;
 		}
-		return HopperTransferHelper::transferOneItem($tile->getInventory(), $destination->getInventory());
-	}
 
-	private function pullItems(World $world, TileHopper $tile) : bool{
-		$source = $world->getTile($this->position->up());
-		if(!$source instanceof Container){
+		$currentTile = $this->position->getWorld()->getTile($this->position);
+		if(!$currentTile instanceof TileHopper){
 			return false;
 		}
-		return HopperTransferHelper::transferOneItem($source->getInventory(), $tile->getInventory());
-	}
 
-	private function pickupItems(World $world, TileHopper $tile) : bool{
-		$pickupArea = AxisAlignedBB::one()->offset($this->position->x, $this->position->y, $this->position->z)->extend(Facing::UP, 1);
-		$inventory = $tile->getInventory();
-		foreach($world->getNearbyEntities($pickupArea) as $entity){
-			if(!$entity instanceof ItemEntity || $entity->isFlaggedForDespawn()){
-				continue;
-			}
-			$item = $entity->getItem();
-			if(!$inventory->canAddItem($item)){
-				continue;
-			}
-			$inventory->addItem($item);
-			$entity->flagForDespawn();
+		$tileHopper = $this->position->getWorld()->getTile($hopperBlock->position);
+		if(!$tileHopper instanceof TileHopper){
+			return false;
+		}
+
+		$ok = $this->transferMultiple(
+			$tileHopper->getInventory(),
+			$currentTile->getInventory(),
+			static::TRANSFER_PER_ACTION
+		);
+
+		if($ok){
+			$hopperBlock->updateTransferCooldown();
 			return true;
 		}
+
 		return false;
 	}
+
+	public function doHopperPull(Hopper $hopperBlock) : bool{
+		if($this->isTransferInCooldown()){
+			return false;
+		}
+
+		$currentTile = $this->position->getWorld()->getTile($this->position);
+		if(!$currentTile instanceof TileHopper){
+			return false;
+		}
+
+		$tileHopper = $this->position->getWorld()->getTile($hopperBlock->position);
+		if(!$tileHopper instanceof TileHopper){
+			return false;
+		}
+
+		return $this->transferMultiple(
+			$currentTile->getInventory(),
+			$tileHopper->getInventory(),
+			static::TRANSFER_PER_ACTION
+		);
+	}
+
+	public function getPickingBox() : AxisAlignedBB{
+		return $this->pickingBox ??= $this->recalculateBoundingBox();
+	}
+
+	protected function recalculateBoundingBox() : AxisAlignedBB{
+		return AxisAlignedBB::one()->expand(0, 1, 0)->offset($this->position->x, $this->position->y, $this->position->z);
+	}
+
+	private function isTransferInCooldown() : bool{
+		$currentTick = $this->position->getWorld()->getServer()->getTick();
+		return $currentTick - $this->lastTransferActionTick < static::TRANSFER_COOLDOWN;
+	}
+
+	private function isEntityPickingInCooldown() : bool{
+		$currentTick = $this->position->getWorld()->getServer()->getTick();
+		return $currentTick - $this->lastEntityPickupTick < static::ENTITY_PICKUP_COOLDOWN;
+	}
+
+	private function updateTransferCooldown() : void{
+		$this->lastTransferActionTick = $this->position->getWorld()->getServer()->getTick();
+	}
+
+	private function updateEntityPickingCooldown() : void{
+		$this->lastEntityPickupTick = $this->position->getWorld()->getServer()->getTick();
+	}
+
+	private function getNextTickUpdate() : int{
+		$currentTick = $this->position->getWorld()->getServer()->getTick();
+
+		$nextTick = 1;
+		if($this->isTransferInCooldown()){
+			$nextTick = static::TRANSFER_COOLDOWN - ($currentTick - $this->lastTransferActionTick);
+		}
+		if($this->isEntityPickingInCooldown()){
+			$nextTick = min($nextTick, static::ENTITY_PICKUP_COOLDOWN - ($currentTick - $this->lastEntityPickupTick));
+		}
+
+		return $nextTick;
+	}
+
+	//TODO: redstone logic
 }

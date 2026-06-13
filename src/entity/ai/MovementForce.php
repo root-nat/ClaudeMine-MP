@@ -49,6 +49,22 @@ final class MovementForce{
 	}
 
 	/**
+	 * Velocity-aware walk force. Returns the per-tick force to apply along the move direction, but adds nothing when the
+	 * mob is already travelling that way at or above its target walk speed — e.g. right after a knockback. This stops a
+	 * mob's own pathing from sustaining and amplifying knockback velocity (which made hit mobs fly far); the engine's
+	 * friction then decays the excess naturally, matching vanilla move control which targets a speed rather than pushing
+	 * unconditionally.
+	 *
+	 * @param float $currentForwardSpeed the mob's current velocity component along the (unit) move direction
+	 */
+	public static function accelerationForce(float $targetSpeed, float $currentForwardSpeed, float $friction = self::DEFAULT_GROUND_FRICTION) : float{
+		if($currentForwardSpeed >= $targetSpeed){
+			return 0.0;
+		}
+		return self::computeForce($targetSpeed, $friction);
+	}
+
+	/**
 	 * Simulates the steady-state speed reached after applying $force each tick under $friction, used to verify the
 	 * inverse relationship in tests.
 	 */

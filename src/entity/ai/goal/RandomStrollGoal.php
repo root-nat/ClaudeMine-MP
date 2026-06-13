@@ -89,8 +89,14 @@ final class RandomStrollGoal extends BaseGoal{
 		$pos = $mob->getPosition();
 		$intent = $this->navigator->tick($pos);
 		if($intent->hasMovement()){
-			$force = MovementForce::computeForce(max(0.01, $mob->getMovementSpeed()) * self::SPEED_FACTOR);
-			$mob->addMotion($intent->dirX * $force, 0, $intent->dirZ * $force);
+			$targetSpeed = max(0.01, $mob->getMovementSpeed()) * self::SPEED_FACTOR;
+			$motion = $mob->getMotion();
+			$forward = $motion->x * $intent->dirX + $motion->z * $intent->dirZ;
+			$force = MovementForce::accelerationForce($targetSpeed, $forward);
+			if($force > 0.0){
+				$mob->addMotion($intent->dirX * $force, 0, $intent->dirZ * $force);
+			}
+			$mob->setMoveDirection($intent->dirX, $intent->dirZ);
 		}
 		if($intent->jump){
 			$mob->jump();
