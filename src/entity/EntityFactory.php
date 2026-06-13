@@ -246,6 +246,22 @@ final class EntityFactory{
 			return new Enderman(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['Enderman', 'minecraft:enderman']);
 
+		$this->register(Wither::class, function(World $world, CompoundTag $nbt) : Wither{
+			return new Wither(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Wither', 'minecraft:wither']);
+
+		$this->register(EnderDragon::class, function(World $world, CompoundTag $nbt) : EnderDragon{
+			return new EnderDragon(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['EnderDragon', 'minecraft:ender_dragon']);
+
+		$this->register(Slime::class, function(World $world, CompoundTag $nbt) : Slime{
+			return new Slime(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Slime', 'minecraft:slime']);
+
+		$this->register(MagmaCube::class, function(World $world, CompoundTag $nbt) : MagmaCube{
+			return new MagmaCube(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['LavaSlime', 'MagmaCube', 'minecraft:magma_cube']);
+
 		$this->register(Villager::class, function(World $world, CompoundTag $nbt) : Villager{
 			return new Villager(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['Villager', 'minecraft:villager']);

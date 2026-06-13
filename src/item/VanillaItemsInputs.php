@@ -31,9 +31,11 @@ use pocketmine\entity\Chicken;
 use pocketmine\entity\Cow;
 use pocketmine\entity\Creeper;
 use pocketmine\entity\Enderman;
+use pocketmine\entity\MagmaCube;
 use pocketmine\entity\Pig;
 use pocketmine\entity\Sheep;
 use pocketmine\entity\Skeleton;
+use pocketmine\entity\Slime;
 use pocketmine\entity\Spider;
 use pocketmine\entity\Squid;
 use pocketmine\entity\Villager;
@@ -398,6 +400,16 @@ final class VanillaItemsInputs extends RegistrySource{
 		self::register("enderman_spawn_egg", fn(IID $id) => new class($id, "Enderman Spawn Egg") extends SpawnEgg{
 			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
 				return new Enderman(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("slime_spawn_egg", fn(IID $id) => new class($id, "Slime Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Slime(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("magma_cube_spawn_egg", fn(IID $id) => new class($id, "Magma Cube Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new MagmaCube(Location::fromObject($pos, $world, $yaw, $pitch));
 			}
 		});
 		self::register("villager_spawn_egg", fn(IID $id) => new class($id, "Villager Spawn Egg") extends SpawnEgg{

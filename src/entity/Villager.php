@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
+use pocketmine\entity\villager\GossipContainer;
+use pocketmine\entity\villager\GossipType;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\nbt\tag\CompoundTag;
@@ -44,6 +46,7 @@ class Villager extends Living implements Ageable{
 
 	private bool $baby = false;
 	private int $profession = self::PROFESSION_FARMER;
+	private GossipContainer $gossip;
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{
 		return new EntitySizeInfo(1.9, 0.6); //TODO: eye height??
@@ -55,6 +58,8 @@ class Villager extends Living implements Ageable{
 
 	protected function initEntity(CompoundTag $nbt) : void{
 		parent::initEntity($nbt);
+
+		$this->gossip = new GossipContainer();
 
 		/** @var int $profession */
 		$profession = $nbt->getInt(self::TAG_PROFESSION, self::PROFESSION_FARMER);
@@ -83,6 +88,27 @@ class Villager extends Living implements Ageable{
 
 	public function getProfession() : int{
 		return $this->profession;
+	}
+
+	/**
+	 * Returns this villager's gossip memory, which backs player reputation. Note: gossip is not yet persisted to NBT.
+	 */
+	public function getGossip() : GossipContainer{
+		return $this->gossip;
+	}
+
+	/**
+	 * Records a gossip event about a player (e.g. trading, attacking, or curing this villager).
+	 */
+	public function recordGossip(string $playerKey, GossipType $type, int $amount) : void{
+		$this->gossip->add($playerKey, $type, $amount);
+	}
+
+	/**
+	 * Returns the given player's reputation with this villager (positive = liked, negative = disliked).
+	 */
+	public function getReputation(string $playerKey) : int{
+		return $this->gossip->getReputation($playerKey);
 	}
 
 	public function isBaby() : bool{

@@ -416,6 +416,8 @@ final class ItemSerializerDeserializerRegistrar{
 		$this->map1to1Item(Ids::CREEPER_SPAWN_EGG, Items::CREEPER_SPAWN_EGG());
 		$this->map1to1Item(Ids::SPIDER_SPAWN_EGG, Items::SPIDER_SPAWN_EGG());
 		$this->map1to1Item(Ids::ENDERMAN_SPAWN_EGG, Items::ENDERMAN_SPAWN_EGG());
+		$this->map1to1Item(Ids::SLIME_SPAWN_EGG, Items::SLIME_SPAWN_EGG());
+		$this->map1to1Item(Ids::MAGMA_CUBE_SPAWN_EGG, Items::MAGMA_CUBE_SPAWN_EGG());
 		$this->map1to1Item(Ids::STICK, Items::STICK());
 		$this->map1to1Item(Ids::STONE_AXE, Items::STONE_AXE());
 		$this->map1to1Item(Ids::STONE_HOE, Items::STONE_HOE());

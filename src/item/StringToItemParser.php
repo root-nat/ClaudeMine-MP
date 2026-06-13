@@ -1605,6 +1605,8 @@ final class StringToItemParser extends StringToTParser{
 		$result->register("creeper_spawn_egg", fn() => Items::CREEPER_SPAWN_EGG());
 		$result->register("spider_spawn_egg", fn() => Items::SPIDER_SPAWN_EGG());
 		$result->register("enderman_spawn_egg", fn() => Items::ENDERMAN_SPAWN_EGG());
+		$result->register("slime_spawn_egg", fn() => Items::SLIME_SPAWN_EGG());
+		$result->register("magma_cube_spawn_egg", fn() => Items::MAGMA_CUBE_SPAWN_EGG());
 		$result->register("steak", fn() => Items::STEAK());
 		$result->register("stick", fn() => Items::STICK());
 		$result->register("sticks", fn() => Items::STICK());

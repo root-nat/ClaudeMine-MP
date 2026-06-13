@@ -26,6 +26,9 @@ namespace pocketmine\block;
 use pocketmine\block\tile\MobHead as TileMobHead;
 use pocketmine\block\utils\MobHeadType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\entity\boss\WitherSpawnPattern;
+use pocketmine\entity\Location;
+use pocketmine\entity\Wither;
 use pocketmine\item\Item;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
@@ -126,5 +129,31 @@ class MobHead extends Flowable{
 			$this->rotation = ((int) floor(($player->getLocation()->getYaw() * 16 / 360) + 0.5)) & 0xf;
 		}
 		return parent::place($tx, $item, $blockReplace, $blockClicked, $face, $clickVector, $player);
+	}
+
+	public function onPostPlace() : void{
+		if($this->mobHeadType !== MobHeadType::WITHER_SKELETON || $this->facing !== Facing::UP){
+			return;
+		}
+		$world = $this->position->getWorld();
+		$isSkull = function(int $x, int $y, int $z) use ($world) : bool{
+			$block = $world->getBlockAt($x, $y, $z);
+			return $block instanceof MobHead && $block->getMobHeadType() === MobHeadType::WITHER_SKELETON && $block->getFacing() === Facing::UP;
+		};
+		$isSoulSand = fn(int $x, int $y, int $z) => $world->getBlockAt($x, $y, $z)->getTypeId() === BlockTypeIds::SOUL_SAND;
+
+		$match = WitherSpawnPattern::findCentre($isSkull, $isSoulSand, $this->position->getFloorX(), $this->position->getFloorY(), $this->position->getFloorZ());
+		if($match === null){
+			return;
+		}
+		[$cx, $cy, $cz, $alongX] = $match;
+
+		//clear the validated structure using the axis the pattern matched on (single source of truth)
+		foreach(WitherSpawnPattern::structureBlocks([$cx, $cy, $cz], $alongX) as [$bx, $by, $bz]){
+			$world->setBlockAt($bx, $by, $bz, VanillaBlocks::AIR());
+		}
+
+		$wither = new Wither(Location::fromObject(new Vector3($cx + 0.5, $cy - 2, $cz + 0.5), $world));
+		$wither->spawnToAll();
 	}
 }

@@ -24,6 +24,9 @@ declare(strict_types=1);
 namespace pocketmine\world\generator\normal;
 
 use pocketmine\block\Block;
+use pocketmine\block\BlockTypeIds;
+use pocketmine\block\Liquid;
+use pocketmine\block\RuntimeBlockStateRegistry;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\bedrock\BiomeIds;
 use pocketmine\utils\AssumptionFailedError;
@@ -34,6 +37,9 @@ use pocketmine\world\format\Chunk;
 use pocketmine\world\format\PalettedBlockArray;
 use pocketmine\world\format\SubChunk;
 use pocketmine\world\generator\biome\BiomeSelector;
+use pocketmine\world\generator\carver\CarverPopulator;
+use pocketmine\world\generator\carver\CaveCarver;
+use pocketmine\world\generator\carver\RavineCarver;
 use pocketmine\world\generator\Gaussian;
 use pocketmine\world\generator\Generator;
 use pocketmine\world\generator\InvalidGeneratorOptionsException;
@@ -42,6 +48,8 @@ use pocketmine\world\generator\object\OreType;
 use pocketmine\world\generator\populator\GroundCover;
 use pocketmine\world\generator\populator\Ore;
 use pocketmine\world\generator\populator\Populator;
+use pocketmine\world\generator\structure\DungeonStructure;
+use pocketmine\world\generator\structure\StructurePopulator;
 use pocketmine\world\World;
 use function ceil;
 use function floor;
@@ -114,6 +122,22 @@ class Normal extends Generator{
 
 		$this->selector->recalculate();
 
+		//caves and ravines must be carved BEFORE GroundCover so the surface layer is re-applied over exposed cave faces
+		$registry = RuntimeBlockStateRegistry::getInstance();
+		$canCarve = static function(int $stateId) use ($registry) : bool{
+			$block = $registry->fromStateId($stateId);
+			if($block instanceof Liquid){
+				return false;
+			}
+			$typeId = $block->getTypeId();
+			return $typeId !== BlockTypeIds::AIR && $typeId !== BlockTypeIds::BEDROCK;
+		};
+		$air = Block::EMPTY_STATE_ID;
+		$this->generationPopulators[] = new CarverPopulator($this->seed, [
+			new CaveCarver($air, $canCarve),
+			new RavineCarver($air, $canCarve)
+		]);
+
 		$cover = new GroundCover();
 		$this->generationPopulators[] = $cover;
 
@@ -130,6 +154,16 @@ class Normal extends Generator{
 			new OreType(VanillaBlocks::GRAVEL(), $stone, 10, 16, 0, 128)
 		]);
 		$this->populators[] = $ores;
+
+		//dungeons spawn in caves after terrain + carving are complete
+		$dungeon = new DungeonStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::COBBLESTONE()->getStateId(),
+			VanillaBlocks::MOSSY_COBBLESTONE()->getStateId(),
+			VanillaBlocks::MONSTER_SPAWNER()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new StructurePopulator($this->seed, $dungeon, rarity: 8, airStateId: Block::EMPTY_STATE_ID);
 	}
 
 	private function pickBiome(int $x, int $z) : Biome{
