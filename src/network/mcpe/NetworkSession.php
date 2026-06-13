@@ -73,7 +73,11 @@ use pocketmine\network\mcpe\protocol\PacketDecodeException;
 use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\PlayerListPacket;
 use pocketmine\network\mcpe\protocol\PlayerStartItemCooldownPacket;
+use pocketmine\network\mcpe\protocol\ChangeDimensionPacket;
+use pocketmine\network\mcpe\protocol\GameRulesChangedPacket;
+use pocketmine\network\mcpe\protocol\LevelEventPacket;
 use pocketmine\network\mcpe\protocol\PlayStatusPacket;
+use pocketmine\network\mcpe\protocol\types\LevelEvent;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\AvailableCommandsPacketAssembler;
 use pocketmine\network\mcpe\protocol\serializer\PacketBatch;
@@ -117,8 +121,11 @@ use pocketmine\timings\Timings;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\utils\ObjectSet;
 use pocketmine\utils\TextFormat;
+use pocketmine\world\Dimension;
 use pocketmine\world\format\io\GlobalItemDataHandlers;
+use pocketmine\world\gamerule\GameRules;
 use pocketmine\world\Position;
+use pocketmine\world\weather\WeatherManager;
 use pocketmine\world\World;
 use pocketmine\YmlServerProperties;
 use function array_map;
@@ -190,6 +197,8 @@ class NetworkSession{
 	/** @phpstan-var \SplQueue<array{CompressBatchPromise|string, list<PromiseResolver<true>>, bool}> */
 	private \SplQueue $compressedQueue;
 	private bool $forceAsyncCompression = true;
+	private ?Dimension $clientDimension = null;
+	private int $lastLoadingScreenId = 0;
 	private bool $enableCompression = false; //disabled until handshake completed
 
 	private int $nextAckReceiptId = 0;
@@ -1092,11 +1101,11 @@ class NetworkSession{
 	public function syncPlayerSpawnPoint(Position $newSpawn) : void{
 		$newSpawnBlockPosition = BlockPosition::fromVector3($newSpawn);
 		//TODO: respawn causing block position (bed, respawn anchor)
-		$this->sendDataPacket(SetSpawnPositionPacket::playerSpawn($newSpawnBlockPosition, DimensionIds::OVERWORLD, $newSpawnBlockPosition));
+		$this->sendDataPacket(SetSpawnPositionPacket::playerSpawn($newSpawnBlockPosition, $newSpawn->getWorld()->getDimension()->getNetworkId(), $newSpawnBlockPosition));
 	}
 
 	public function syncWorldSpawnPoint(Position $newSpawn) : void{
-		$this->sendDataPacket(SetSpawnPositionPacket::worldSpawn(BlockPosition::fromVector3($newSpawn), DimensionIds::OVERWORLD));
+		$this->sendDataPacket(SetSpawnPositionPacket::worldSpawn(BlockPosition::fromVector3($newSpawn), $newSpawn->getWorld()->getDimension()->getNetworkId()));
 	}
 
 	public function syncGameMode(GameMode $mode, bool $isRollback = false) : void{
@@ -1315,11 +1324,46 @@ class NetworkSession{
 	public function onEnterWorld() : void{
 		if($this->player !== null){
 			$world = $this->player->getWorld();
+			$dimension = $world->getDimension();
+			if($this->clientDimension !== null && $this->clientDimension !== $dimension){
+				$this->sendDataPacket(ChangeDimensionPacket::create(
+					$dimension->getNetworkId(),
+					$this->player->getOffsetPosition($this->player->getLocation()),
+					false,
+					++$this->lastLoadingScreenId
+				));
+				$this->sendDataPacket(PlayStatusPacket::create(PlayStatusPacket::PLAYER_SPAWN));
+			}
+			$this->clientDimension = $dimension;
 			$this->syncWorldTime($world->getTime());
 			$this->syncWorldDifficulty($world->getDifficulty());
 			$this->syncWorldSpawnPoint($world->getSpawnLocation());
-			//TODO: weather needs to be synced here (when implemented)
+			$this->syncGameRules($world->getGameRules());
+			$weather = $world->getWeather();
+			$this->syncWeather($weather->isRaining(), $weather->isThundering());
 		}
+	}
+
+	/**
+	 * @internal
+	 */
+	public function setClientDimension(Dimension $dimension) : void{
+		$this->clientDimension = $dimension;
+	}
+
+	public function syncWeather(bool $raining, bool $thundering) : void{
+		$this->sendDataPacket($raining ?
+			LevelEventPacket::create(LevelEvent::START_RAIN, WeatherManager::NETWORK_MAX_INTENSITY, null) :
+			LevelEventPacket::create(LevelEvent::STOP_RAIN, 0, null)
+		);
+		$this->sendDataPacket($thundering ?
+			LevelEventPacket::create(LevelEvent::START_THUNDER, WeatherManager::NETWORK_MAX_INTENSITY, null) :
+			LevelEventPacket::create(LevelEvent::STOP_THUNDER, 0, null)
+		);
+	}
+
+	public function syncGameRules(GameRules $gameRules) : void{
+		$this->sendDataPacket(GameRulesChangedPacket::create($this->typeConverter->coreGameRulesToProtocol($gameRules)));
 	}
 
 	public function syncWorldTime(int $worldTime) : void{

@@ -135,6 +135,7 @@ use pocketmine\world\ChunkListenerNoOpTrait;
 use pocketmine\world\ChunkLoader;
 use pocketmine\world\ChunkTicker;
 use pocketmine\world\format\Chunk;
+use pocketmine\world\gamerule\GameRule;
 use pocketmine\world\Position;
 use pocketmine\world\sound\EntityAttackNoDamageSound;
 use pocketmine\world\sound\EntityAttackSound;
@@ -1989,7 +1990,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if(!$this->canInteract($entity->getLocation(), self::MAX_REACH_DISTANCE_ENTITY_INTERACTION)){
 			$this->logger->debug("Cancelled attack of entity " . $entity->getId() . " due to not currently being interactable");
 			$ev->cancel();
-		}elseif($this->isSpectator() || ($entity instanceof Player && !$this->server->getConfigGroup()->getConfigBool(ServerProperties::PVP))){
+		}elseif($this->isSpectator() || ($entity instanceof Player && (
+			!$this->server->getConfigGroup()->getConfigBool(ServerProperties::PVP)
+			|| !$entity->getWorld()->getGameRules()->getBool(GameRule::PVP)
+		))){
 			$ev->cancel();
 		}
 
@@ -2516,6 +2520,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->server->saveOfflinePlayerData($this->username, $this->getSaveData());
 	}
 
+	public function getRequiredNetherPortalTicks() : int{
+		return $this->isCreative() ? 1 : 80;
+	}
+
 	protected function onDeath() : void{
 		//Crafting grid must always be evacuated even if keep-inventory is true. This dumps the contents into the
 		//main inventory and drops the rest on the ground.
@@ -2524,6 +2532,10 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		$this->setDeathPosition($this->getPosition());
 
 		$ev = new PlayerDeathEvent($this, $this->getDrops(), $this->getXpDropAmount(), null);
+		if($this->getWorld()->getGameRules()->getBool(GameRule::KEEP_INVENTORY)){
+			$ev->setKeepInventory(true);
+			$ev->setKeepXp(true);
+		}
 		$ev->call();
 
 		if(!$ev->getKeepInventory()){
@@ -2543,7 +2555,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$this->xpManager->setXpAndProgress(0, 0.0);
 		}
 
-		if($ev->getDeathMessage() !== ""){
+		if($ev->getDeathMessage() !== "" && $this->getWorld()->getGameRules()->getBool(GameRule::SHOW_DEATH_MESSAGES)){
 			$this->server->broadcastMessage($ev->getDeathMessage());
 		}
 
@@ -2674,8 +2686,7 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 		if($this->deathPosition !== null && $this->deathPosition->world === $this->location->world){
 			$properties->setBlockPos(EntityMetadataProperties::PLAYER_DEATH_POSITION, BlockPosition::fromVector3($this->deathPosition));
-			//TODO: this should be updated when dimensions are implemented
-			$properties->setInt(EntityMetadataProperties::PLAYER_DEATH_DIMENSION, DimensionIds::OVERWORLD);
+			$properties->setInt(EntityMetadataProperties::PLAYER_DEATH_DIMENSION, $this->deathPosition->getWorld()->getDimension()->getNetworkId());
 			$properties->setByte(EntityMetadataProperties::PLAYER_HAS_DIED, 1);
 		}else{
 			$properties->setBlockPos(EntityMetadataProperties::PLAYER_DEATH_POSITION, new BlockPosition(0, 0, 0));

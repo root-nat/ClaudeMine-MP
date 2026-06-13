@@ -28,7 +28,6 @@ use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
-use pocketmine\world\particle\SmokeParticle;
 use pocketmine\world\sound\Sound;
 use function min;
 
@@ -115,12 +114,8 @@ abstract class FillableCauldron extends Transparent{
 	 * @param Item[] &$returnedItems
 	 */
 	protected function mix(Item $usedItem, Item $returnedItem, array &$returnedItems) : void{
-		$world = $this->position->getWorld();
-		$world->setBlock($this->position, VanillaBlocks::CAULDRON());
-		$world->addSound($this->position->add(0.5, 0.5, 0.5), $this->getEmptySound());
-		for($i = 0; $i < 8; $i++){
-			$world->addParticle($this->position->add(0.5, 1.0, 0.5), new SmokeParticle());
-		}
+		$this->position->getWorld()->setBlock($this->position, VanillaBlocks::CAULDRON());
+		//TODO: sounds and particles
 
 		$usedItem->pop();
 		$returnedItems[] = $returnedItem;

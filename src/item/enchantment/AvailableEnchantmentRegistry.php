@@ -61,10 +61,6 @@ final class AvailableEnchantmentRegistry{
 		$this->register(Enchantments::FROST_WALKER(), [/* no primary items */], [Tags::BOOTS]);
 		$this->register(Enchantments::SHARPNESS(), [Tags::SWORD, Tags::AXE], []);
 		$this->register(Enchantments::KNOCKBACK(), [Tags::SWORD], []);
-		$this->register(Enchantments::LOYALTY(), [Tags::TRIDENT], []);
-		$this->register(Enchantments::CHANNELING(), [Tags::TRIDENT], []);
-		$this->register(Enchantments::RIPTIDE(), [Tags::TRIDENT], []);
-		$this->register(Enchantments::IMPALING(), [Tags::TRIDENT], []);
 		$this->register(Enchantments::FIRE_ASPECT(), [Tags::SWORD], []);
 		$this->register(Enchantments::EFFICIENCY(), [Tags::BLOCK_TOOLS], [Tags::SHEARS]);
 		$this->register(Enchantments::FORTUNE(), [Tags::BLOCK_TOOLS], []);

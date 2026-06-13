@@ -45,6 +45,7 @@ use pocketmine\entity\Location;
 use pocketmine\entity\NeverSavedWithChunkEntity;
 use pocketmine\entity\object\ExperienceOrb;
 use pocketmine\entity\object\ItemEntity;
+use pocketmine\entity\object\LightningBolt;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockUpdateEvent;
@@ -94,6 +95,8 @@ use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\format\io\WritableWorldProvider;
 use pocketmine\world\format\LightArray;
 use pocketmine\world\format\SubChunk;
+use pocketmine\world\gamerule\GameRule;
+use pocketmine\world\gamerule\GameRules;
 use pocketmine\world\generator\executor\AsyncGeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutorSetupParameters;
@@ -108,6 +111,7 @@ use pocketmine\world\particle\Particle;
 use pocketmine\world\sound\BlockPlaceSound;
 use pocketmine\world\sound\Sound;
 use pocketmine\world\utils\SubChunkExplorer;
+use pocketmine\world\weather\WeatherManager;
 use pocketmine\YmlServerProperties;
 use function abs;
 use function array_filter;
@@ -118,6 +122,7 @@ use function array_merge;
 use function array_sum;
 use function array_values;
 use function assert;
+use function ceil;
 use function cos;
 use function count;
 use function floor;
@@ -480,6 +485,10 @@ class World implements ChunkManager{
 	/**
 	 * Init the default world data
 	 */
+	private Dimension $dimension;
+	private WeatherManager $weather;
+	private GameRules $gameRules;
+
 	public function __construct(
 		private Server $server,
 		string $name, //TODO: this should be folderName (named arguments BC break)
@@ -537,7 +546,12 @@ class World implements ChunkManager{
 
 		$this->neighbourBlockUpdateQueue = new \SplQueue();
 
-		$this->time = $this->provider->getWorldData()->getTime();
+		$worldData = $this->provider->getWorldData();
+		$this->time = $worldData->getTime();
+		$this->dimension = $worldData->getDimension() ?? Dimension::fromGeneratorName($worldData->getGenerator());
+		$this->gameRules = new GameRules($worldData->getGameRules());
+		$this->weather = new WeatherManager($this);
+		$this->weather->readSaveData($worldData);
 
 		$cfg = $this->server->getConfigGroup();
 		$this->chunkTickRadius = min($this->server->getViewDistance(), max(0, $cfg->getPropertyInt(YmlServerProperties::CHUNK_TICKING_TICK_RADIUS, 4)));
@@ -594,6 +608,25 @@ class World implements ChunkManager{
 
 	public function getServer() : Server{
 		return $this->server;
+	}
+
+	public function getDimension() : Dimension{
+		return $this->dimension;
+	}
+
+	public function getWeather() : WeatherManager{
+		return $this->weather;
+	}
+
+	public function getGameRules() : GameRules{
+		return $this->gameRules;
+	}
+
+	public function setGameRule(GameRule $rule, bool|int $value) : void{
+		$this->gameRules->set($rule, $value);
+		foreach($this->players as $player){
+			$player->getNetworkSession()->syncGameRules($this->gameRules);
+		}
 	}
 
 	public function getLogger() : \Logger{
@@ -928,7 +961,7 @@ class World implements ChunkManager{
 	}
 
 	protected function actuallyDoTick(int $currentTick) : void{
-		if(!$this->stopTime){
+		if(!$this->stopTime && $this->gameRules->getBool(GameRule::DO_DAYLIGHT_CYCLE)){
 			//this simulates an overflow, as would happen in any language which doesn't do stupid things to var types
 			if($this->time === PHP_INT_MAX){
 				$this->time = PHP_INT_MIN;
@@ -939,6 +972,10 @@ class World implements ChunkManager{
 
 		$this->sunAnglePercentage = $this->computeSunAnglePercentage(); //Sun angle depends on the current time
 		$this->skyLightReduction = $this->computeSkyLightReduction(); //Sky light reduction depends on the sun angle
+
+		if($this->dimension->hasWeather()){
+			$this->weather->tick();
+		}
 
 		if(++$this->sendTimeTicker === 200){
 			$this->sendTime();
@@ -1058,13 +1095,15 @@ class World implements ChunkManager{
 			return;
 		}
 
-		$resetTime = true;
+		$sleepingPercentage = $this->gameRules->getInt(GameRule::PLAYERS_SLEEPING_PERCENTAGE);
+		$requiredSleepers = $sleepingPercentage <= 0 ? 1 : (int) ceil(count($this->players) * ($sleepingPercentage / 100));
+		$sleepers = 0;
 		foreach($this->getPlayers() as $p){
-			if(!$p->isSleeping()){
-				$resetTime = false;
-				break;
+			if($p->isSleeping()){
+				++$sleepers;
 			}
 		}
+		$resetTime = $sleepers > 0 && $sleepers >= $requiredSleepers;
 
 		if($resetTime){
 			$time = $this->getTimeOfDay();
@@ -1081,6 +1120,16 @@ class World implements ChunkManager{
 
 	public function setSleepTicks(int $ticks) : void{
 		$this->sleepTicks = $ticks;
+	}
+
+	/**
+	 * Spawns a lightning bolt at the given position, damaging nearby entities and optionally creating fire.
+	 */
+	public function strikeLightning(Vector3 $pos, bool $createFire = true) : LightningBolt{
+		$lightning = new LightningBolt(Location::fromObject($pos, $this));
+		$lightning->setCreatesFire($createFire && $this->gameRules->getBool(GameRule::DO_FIRE_TICK));
+		$lightning->spawnToAll();
+		return $lightning;
 	}
 
 	/**
@@ -1390,11 +1439,25 @@ class World implements ChunkManager{
 			$entity->onRandomUpdate();
 		}
 
+		if($this->weather->isThundering() && mt_rand(0, 99999) === 0){
+			$x = ($chunkX << Chunk::COORD_BIT_SIZE) + mt_rand(0, Chunk::EDGE_LENGTH - 1);
+			$z = ($chunkZ << Chunk::COORD_BIT_SIZE) + mt_rand(0, Chunk::EDGE_LENGTH - 1);
+			$y = $this->getHighestBlockAt($x, $z);
+			if($y !== null){
+				$this->strikeLightning(new Vector3($x + 0.5, $y + 1, $z + 0.5));
+			}
+		}
+
+		$tickedBlocksPerSubchunk = $this->tickedBlocksPerSubchunkPerTick * $this->gameRules->getInt(GameRule::RANDOM_TICK_SPEED);
+		if($tickedBlocksPerSubchunk <= 0){
+			return;
+		}
+
 		$blockFactory = $this->blockStateRegistry;
 		foreach($chunk->getSubChunks() as $Y => $subChunk){
 			if(!$subChunk->isEmptyFast()){
 				$k = 0;
-				for($i = 0; $i < $this->tickedBlocksPerSubchunkPerTick; ++$i){
+				for($i = 0; $i < $tickedBlocksPerSubchunk; ++$i){
 					if(($i % 5) === 0){
 						//60 bits will be used by 5 blocks (12 bits each)
 						$k = mt_rand(0, (1 << 60) - 1);
@@ -1434,9 +1497,13 @@ class World implements ChunkManager{
 		$timings = $this->timings->syncDataSave;
 		$timings->startTiming();
 
-		$this->provider->getWorldData()->setTime($this->time);
+		$worldData = $this->provider->getWorldData();
+		$worldData->setTime($this->time);
+		$this->weather->writeSaveData($worldData);
+		$worldData->setGameRules($this->gameRules->getAll());
+		$worldData->setDimension($this->dimension);
 		$this->saveChunks();
-		$this->provider->getWorldData()->save();
+		$worldData->save();
 
 		$timings->stopTiming();
 
@@ -2149,13 +2216,15 @@ class World implements ChunkManager{
 			$item = VanillaItems::AIR();
 		}
 
+		$doTileDrops = $this->gameRules->getBool(GameRule::DO_TILE_DROPS);
+
 		$drops = [];
-		if($player === null || $player->hasFiniteResources()){
+		if($doTileDrops && ($player === null || $player->hasFiniteResources())){
 			$drops = array_merge(...array_map(fn(Block $block) => $block->getDrops($item), $affectedBlocks));
 		}
 
 		$xpDrop = 0;
-		if($player !== null && $player->hasFiniteResources()){
+		if($doTileDrops && $player !== null && $player->hasFiniteResources()){
 			$xpDrop = array_sum(array_map(fn(Block $block) => $block->getXpDropForTool($item), $affectedBlocks));
 		}
 

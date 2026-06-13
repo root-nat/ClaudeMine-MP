@@ -362,8 +362,17 @@ final class ItemTypeIds{
 	public const RECORD_LAVA_CHICKEN = 20323;
 	public const BAMBOO_HANGING_SIGN = 20324;
 	public const BAMBOO_SIGN = 20325;
+	public const ENDER_EYE = 20326;
+	public const COW_SPAWN_EGG = 20327;
+	public const PIG_SPAWN_EGG = 20328;
+	public const SHEEP_SPAWN_EGG = 20329;
+	public const CHICKEN_SPAWN_EGG = 20330;
+	public const SKELETON_SPAWN_EGG = 20331;
+	public const CREEPER_SPAWN_EGG = 20332;
+	public const SPIDER_SPAWN_EGG = 20333;
+	public const ENDERMAN_SPAWN_EGG = 20334;
 
-	public const FIRST_UNUSED_ITEM_ID = 20326;
+	public const FIRST_UNUSED_ITEM_ID = 20335;
 
 	private static int $nextDynamicId = self::FIRST_UNUSED_ITEM_ID;
 

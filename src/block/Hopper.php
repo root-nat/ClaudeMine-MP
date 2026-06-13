@@ -23,19 +23,21 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
-use pocketmine\block\tile\Container as TileContainer;
+use pocketmine\block\tile\Container;
 use pocketmine\block\tile\Hopper as TileHopper;
+use pocketmine\block\utils\HopperTransferHelper;
 use pocketmine\block\utils\PoweredByRedstone;
 use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
-use pocketmine\inventory\Inventory;
+use pocketmine\entity\object\ItemEntity;
 use pocketmine\item\Item;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
+use pocketmine\world\World;
 
 class Hopper extends Transparent implements PoweredByRedstone{
 	use PoweredByRedstoneTrait;
@@ -94,47 +96,67 @@ class Hopper extends Transparent implements PoweredByRedstone{
 		return false;
 	}
 
-	public function readStateFromWorld() : Block{
-		parent::readStateFromWorld();
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 8);
-		return $this;
+	public function onPostPlace() : void{
+		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, TileHopper::TRANSFER_COOLDOWN_TICKS);
+	}
+
+	public function onNearbyBlockChange() : void{
+		$world = $this->position->getWorld();
+		$powered = $this->isReceivingRedstonePower();
+		if($powered !== $this->powered){
+			$this->powered = $powered;
+			$world->setBlock($this->position, $this);
+		}
+		$world->scheduleDelayedBlockUpdate($this->position, 1);
 	}
 
 	public function onScheduledUpdate() : void{
 		$world = $this->position->getWorld();
+		$tile = $world->getTile($this->position);
+		if(!$tile instanceof TileHopper){
+			return;
+		}
+
 		if(!$this->powered){
-			$tile = $world->getTile($this->position);
-			if($tile instanceof TileHopper){
-				$inv = $tile->getInventory();
-				$pushed = false;
-				$outputTile = $world->getTile($this->position->getSide($this->facing));
-				if($outputTile instanceof TileContainer){
-					$pushed = $this->transferOneItem($inv, $outputTile->getInventory());
-				}
-				if(!$pushed){
-					$aboveTile = $world->getTile($this->position->getSide(Facing::UP));
-					if($aboveTile instanceof TileContainer){
-						$this->transferOneItem($aboveTile->getInventory(), $inv);
-					}
-				}
+			$this->pushItems($world, $tile);
+			if(!$this->pullItems($world, $tile)){
+				$this->pickupItems($world, $tile);
 			}
 		}
-		$world->scheduleDelayedBlockUpdate($this->position, 8);
+
+		$world->scheduleDelayedBlockUpdate($this->position, TileHopper::TRANSFER_COOLDOWN_TICKS);
 	}
 
-	private function transferOneItem(Inventory $from, Inventory $to) : bool{
-		for($i = 0; $i < $from->getSize(); $i++){
-			$item = $from->getItem($i);
-			if($item->isNull()){
+	private function pushItems(World $world, TileHopper $tile) : bool{
+		$destination = $world->getTile($this->position->getSide($this->facing));
+		if(!$destination instanceof Container){
+			return false;
+		}
+		return HopperTransferHelper::transferOneItem($tile->getInventory(), $destination->getInventory());
+	}
+
+	private function pullItems(World $world, TileHopper $tile) : bool{
+		$source = $world->getTile($this->position->up());
+		if(!$source instanceof Container){
+			return false;
+		}
+		return HopperTransferHelper::transferOneItem($source->getInventory(), $tile->getInventory());
+	}
+
+	private function pickupItems(World $world, TileHopper $tile) : bool{
+		$pickupArea = AxisAlignedBB::one()->offset($this->position->x, $this->position->y, $this->position->z)->extend(Facing::UP, 1);
+		$inventory = $tile->getInventory();
+		foreach($world->getNearbyEntities($pickupArea) as $entity){
+			if(!$entity instanceof ItemEntity || $entity->isFlaggedForDespawn()){
 				continue;
 			}
-			$transfer = (clone $item)->setCount(1);
-			if($to->canAddItem($transfer)){
-				$item->setCount($item->getCount() - 1);
-				$from->setItem($i, $item);
-				$to->addItem($transfer);
-				return true;
+			$item = $entity->getItem();
+			if(!$inventory->canAddItem($item)){
+				continue;
 			}
+			$inventory->addItem($item);
+			$entity->flagForDespawn();
+			return true;
 		}
 		return false;
 	}

@@ -36,7 +36,6 @@ use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
-use function max;
 
 class RedstoneRepeater extends Flowable implements PoweredByRedstone, HorizontalFacing{
 	use HorizontalFacingTrait;
@@ -85,32 +84,46 @@ class RedstoneRepeater extends Flowable implements PoweredByRedstone, Horizontal
 		return true;
 	}
 
+	public function onPostPlace() : void{
+		$this->updatePowerState();
+	}
+
 	public function onNearbyBlockChange() : void{
-		$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, $this->delay * 2);
+		if(!$this->canBeSupportedAt($this)){
+			$this->position->getWorld()->useBreakOn($this->position);
+			return;
+		}
+		$this->updatePowerState();
 	}
 
 	public function onScheduledUpdate() : void{
-		$powered = $this->getInputSignal() > 0;
-		if($powered !== $this->powered){
-			$this->powered = $powered;
-			$this->position->getWorld()->setBlock($this->position, $this);
+		$shouldBePowered = $this->hasInputPower();
+		if($shouldBePowered !== $this->powered){
+			$this->powered = $shouldBePowered;
+			$world = $this->position->getWorld();
+			$world->setBlock($this->position, $this);
+			$world->notifyNeighbourBlockUpdate($this->position->getSide(Facing::opposite($this->facing)));
 		}
 	}
 
 	public function getWeakRedstonePower(int $face) : int{
-		return ($this->powered && $face === $this->facing) ? 15 : 0;
+		return $this->powered && $face === Facing::opposite($this->facing) ? 15 : 0;
 	}
 
 	public function getStrongRedstonePower(int $face) : int{
 		return $this->getWeakRedstonePower($face);
 	}
 
-	private function getInputSignal() : int{
-		$rear = $this->getSide(Facing::opposite($this->facing));
-		return max(
-			$rear->getWeakRedstonePower($this->facing),
-			$rear->getStrongRedstonePower($this->facing)
-		);
+	private function hasInputPower() : bool{
+		$input = $this->getSide($this->facing);
+		$inputFace = Facing::opposite($this->facing);
+		return $input->getWeakRedstonePower($inputFace) > 0 || $input->getStrongRedstonePower($inputFace) > 0;
+	}
+
+	private function updatePowerState() : void{
+		if($this->hasInputPower() !== $this->powered){
+			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, $this->delay * 2);
+		}
 	}
 
 	private function canBeSupportedAt(Block $block) : bool{

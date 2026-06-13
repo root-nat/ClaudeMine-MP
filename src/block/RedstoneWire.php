@@ -36,36 +36,71 @@ class RedstoneWire extends Flowable implements AnalogRedstoneSignalEmitter{
 	use AnalogRedstoneSignalEmitterTrait;
 	use StaticSupportTrait;
 
-	public function readStateFromWorld() : Block{
-		parent::readStateFromWorld();
-		$this->signalStrength = $this->calculateSignalStrength();
-		return $this;
+	public function onPostPlace() : void{
+		$this->recalculateSignal();
 	}
 
 	public function onNearbyBlockChange() : void{
+		if(!$this->canBeSupportedAt($this)){
+			$this->position->getWorld()->useBreakOn($this->position);
+			return;
+		}
+		$this->recalculateSignal();
+	}
+
+	private function recalculateSignal() : void{
 		$newStrength = $this->calculateSignalStrength();
 		if($newStrength !== $this->signalStrength){
 			$this->signalStrength = $newStrength;
-			$this->position->getWorld()->setBlock($this->position, $this);
+			$world = $this->position->getWorld();
+			$world->setBlock($this->position, $this);
+			foreach(Facing::HORIZONTAL as $face){
+				$side = $this->position->getSide($face);
+				$world->notifyNeighbourBlockUpdate($side->up());
+				$world->notifyNeighbourBlockUpdate($side->down());
+			}
 		}
-	}
-
-	public function getWeakRedstonePower(int $face) : int{
-		return $face !== Facing::UP ? $this->signalStrength : 0;
 	}
 
 	private function calculateSignalStrength() : int{
-		$maxSignal = 0;
-		foreach(Facing::HORIZONTAL as $face){
-			$neighbor = $this->getSide($face);
-			if($neighbor instanceof self){
-				$maxSignal = max($maxSignal, $neighbor->getOutputSignalStrength() - 1);
-			}else{
-				$maxSignal = max($maxSignal, $neighbor->getWeakRedstonePower(Facing::opposite($face)));
-				$maxSignal = max($maxSignal, $neighbor->getStrongRedstonePower(Facing::opposite($face)));
+		$power = 0;
+
+		foreach(Facing::ALL as $face){
+			$side = $this->getSide($face);
+			if(!($side instanceof self)){
+				$opposite = Facing::opposite($face);
+				$power = max($power, $side->getWeakRedstonePower($opposite), $side->getStrongRedstonePower($opposite));
+				if($power >= 15){
+					return 15;
+				}
 			}
 		}
-		return min(15, max(0, $maxSignal));
+
+		$aboveIsConductor = $this->getSide(Facing::UP)->isRedstoneConductor();
+		foreach(Facing::HORIZONTAL as $face){
+			$side = $this->getSide($face);
+			if($side instanceof self){
+				$power = max($power, $side->getOutputSignalStrength() - 1);
+			}elseif($side->isRedstoneConductor()){
+				if(!$aboveIsConductor){
+					$above = $side->getSide(Facing::UP);
+					if($above instanceof self){
+						$power = max($power, $above->getOutputSignalStrength() - 1);
+					}
+				}
+			}else{
+				$below = $side->getSide(Facing::DOWN);
+				if($below instanceof self){
+					$power = max($power, $below->getOutputSignalStrength() - 1);
+				}
+			}
+		}
+
+		return min(15, max(0, $power));
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return $face === Facing::UP || $this->signalStrength === 0 ? 0 : $this->signalStrength;
 	}
 
 	private function canBeSupportedAt(Block $block) : bool{

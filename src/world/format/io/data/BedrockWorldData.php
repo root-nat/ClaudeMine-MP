@@ -26,6 +26,7 @@ namespace pocketmine\world\format\io\data;
 use pocketmine\data\bedrock\WorldDataVersions;
 use pocketmine\nbt\LittleEndianNbtSerializer;
 use pocketmine\nbt\NbtDataException;
+use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
 use pocketmine\nbt\tag\ListTag;
@@ -34,9 +35,11 @@ use pocketmine\nbt\TreeRoot;
 use pocketmine\utils\Binary;
 use pocketmine\utils\Filesystem;
 use pocketmine\utils\Limits;
+use pocketmine\utils\Utils;
 use pocketmine\VersionInfo;
 use pocketmine\world\format\io\exception\CorruptedWorldException;
 use pocketmine\world\format\io\exception\UnsupportedWorldFormatException;
+use pocketmine\world\gamerule\GameRule;
 use pocketmine\world\generator\Flat;
 use pocketmine\world\generator\GeneratorManager;
 use pocketmine\world\World;
@@ -44,6 +47,8 @@ use pocketmine\world\WorldCreationOptions;
 use Symfony\Component\Filesystem\Path;
 use function array_map;
 use function file_put_contents;
+use function is_bool;
+use function is_int;
 use function sprintf;
 use function strlen;
 use function substr;
@@ -249,5 +254,34 @@ class BedrockWorldData extends BaseNbtWorldData{
 
 	public function setLightningLevel(float $level) : void{
 		$this->compoundTag->setFloat(self::TAG_LIGHTNING_LEVEL, $level);
+	}
+
+	public function getGameRules() : array{
+		$result = [];
+		foreach(GameRule::cases() as $rule){
+			$tag = $this->compoundTag->getTag($rule->value);
+			if($rule->isIntRule()){
+				if($tag instanceof IntTag){
+					$result[$rule->value] = $tag->getValue();
+				}
+			}elseif($tag instanceof ByteTag){
+				$result[$rule->value] = $tag->getValue() !== 0;
+			}
+		}
+		return $result;
+	}
+
+	public function setGameRules(array $rules) : void{
+		foreach(Utils::stringifyKeys($rules) as $name => $value){
+			$rule = GameRule::tryFrom($name);
+			if($rule === null){
+				continue;
+			}
+			if(is_int($value) && $rule->isIntRule()){
+				$this->compoundTag->setInt($rule->value, $value);
+			}elseif(is_bool($value) && !$rule->isIntRule()){
+				$this->compoundTag->setByte($rule->value, $value ? 1 : 0);
+			}
+		}
 	}
 }

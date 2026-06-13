@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\block\tile\Comparator;
+use pocketmine\block\tile\Container;
 use pocketmine\block\utils\AnalogRedstoneSignalEmitter;
 use pocketmine\block\utils\AnalogRedstoneSignalEmitterTrait;
 use pocketmine\block\utils\HorizontalFacing;
@@ -33,6 +34,7 @@ use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\block\utils\StaticSupportTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\inventory\Inventory;
 use pocketmine\item\Item;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
@@ -40,7 +42,9 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\world\BlockTransaction;
 use function assert;
+use function floor;
 use function max;
+use function min;
 
 class RedstoneComparator extends Flowable implements AnalogRedstoneSignalEmitter, PoweredByRedstone, HorizontalFacing{
 	use HorizontalFacingTrait;
@@ -100,45 +104,98 @@ class RedstoneComparator extends Flowable implements AnalogRedstoneSignalEmitter
 		return true;
 	}
 
+	private function canBeSupportedAt(Block $block) : bool{
+		return $block->getAdjacentSupportType(Facing::DOWN) !== SupportType::NONE;
+	}
+
+	public function onPostPlace() : void{
+		$this->updateState();
+	}
+
 	public function onNearbyBlockChange() : void{
+		if(!$this->canBeSupportedAt($this)){
+			$this->position->getWorld()->useBreakOn($this->position);
+			return;
+		}
+		$this->updateState();
+	}
+
+	public function onScheduledUpdate() : void{
 		$newSignal = $this->calculateOutputSignal();
-		$powered = $newSignal > 0;
-		if($newSignal !== $this->signalStrength || $powered !== $this->powered){
+		if($newSignal !== $this->signalStrength || ($newSignal > 0) !== $this->powered){
 			$this->signalStrength = $newSignal;
-			$this->powered = $powered;
-			$this->position->getWorld()->setBlock($this->position, $this);
+			$this->powered = $newSignal > 0;
+			$world = $this->position->getWorld();
+			$world->setBlock($this->position, $this);
+			$world->notifyNeighbourBlockUpdate($this->position->getSide(Facing::opposite($this->facing)));
 		}
 	}
 
 	public function getWeakRedstonePower(int $face) : int{
-		return ($face === $this->facing) ? $this->signalStrength : 0;
+		return $face === Facing::opposite($this->facing) ? $this->signalStrength : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return $this->getWeakRedstonePower($face);
+	}
+
+	private function updateState() : void{
+		if($this->calculateOutputSignal() !== $this->signalStrength){
+			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 2);
+		}
 	}
 
 	private function calculateOutputSignal() : int{
-		$rear = $this->getSide(Facing::opposite($this->facing));
-		$rearSignal = max(
-			$rear->getWeakRedstonePower($this->facing),
-			$rear->getStrongRedstonePower($this->facing)
+		$rear = $this->calculateRearInput();
+		$side = max(
+			$this->calculateSideInput(Facing::rotateY($this->facing, true)),
+			$this->calculateSideInput(Facing::rotateY($this->facing, false))
 		);
-
-		$leftFace = Facing::rotateY($this->facing, false);
-		$rightFace = Facing::rotateY($this->facing, true);
-		$leftBlock = $this->getSide($leftFace);
-		$rightBlock = $this->getSide($rightFace);
-		$sideSignal = max(
-			$leftBlock->getWeakRedstonePower(Facing::opposite($leftFace)),
-			$leftBlock->getStrongRedstonePower(Facing::opposite($leftFace)),
-			$rightBlock->getWeakRedstonePower(Facing::opposite($rightFace)),
-			$rightBlock->getStrongRedstonePower(Facing::opposite($rightFace))
-		);
-
 		if($this->isSubtractMode){
-			return max(0, $rearSignal - $sideSignal);
+			return max(0, $rear - $side);
 		}
-		return $rearSignal >= $sideSignal ? $rearSignal : 0;
+		return $rear >= $side ? $rear : 0;
 	}
 
-	private function canBeSupportedAt(Block $block) : bool{
-		return $block->getAdjacentSupportType(Facing::DOWN) !== SupportType::NONE;
+	private function calculateRearInput() : int{
+		$tile = $this->position->getWorld()->getTile($this->position->getSide($this->facing));
+		if($tile instanceof Container){
+			return self::calculateContainerSignal($tile->getInventory());
+		}
+		$input = $this->getSide($this->facing);
+		$inputFace = Facing::opposite($this->facing);
+		return max($input->getWeakRedstonePower($inputFace), $input->getStrongRedstonePower($inputFace));
+	}
+
+	private function calculateSideInput(int $face) : int{
+		$side = $this->getSide($face);
+		if($side instanceof RedstoneWire){
+			return $side->getOutputSignalStrength();
+		}
+		if($side instanceof RedstoneRepeater || $side instanceof RedstoneComparator){
+			return $side->getWeakRedstonePower(Facing::opposite($face));
+		}
+		return 0;
+	}
+
+	public static function calculateContainerSignal(Inventory $inventory) : int{
+		$size = $inventory->getSize();
+		if($size === 0){
+			return 0;
+		}
+		$fullness = 0.0;
+		$hasItem = false;
+		for($slot = 0; $slot < $size; ++$slot){
+			$item = $inventory->getItem($slot);
+			if($item->isNull()){
+				continue;
+			}
+			$hasItem = true;
+			$fullness += $item->getCount() / min($inventory->getMaxStackSize(), $item->getMaxStackSize());
+		}
+		if(!$hasItem){
+			return 0;
+		}
+		return (int) floor(1 + ($fullness / $size) * 14);
 	}
 }

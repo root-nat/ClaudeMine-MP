@@ -98,6 +98,7 @@ class Lever extends Flowable{
 			$this->position->add(0.5, 0.5, 0.5),
 			$this->activated ? new RedstonePowerOnSound() : new RedstonePowerOffSound()
 		);
+		$world->notifyNeighbourBlockUpdate($this->position->getSide(Facing::opposite($this->facing->getFacing())));
 		return true;
 	}
 
@@ -106,7 +107,7 @@ class Lever extends Flowable{
 	}
 
 	public function getStrongRedstonePower(int $face) : int{
-		return ($this->activated && $face === Facing::opposite($this->facing->getFacing())) ? 15 : 0;
+		return $this->activated && $face === Facing::opposite($this->facing->getFacing()) ? 15 : 0;
 	}
 
 	private function canBeSupportedAt(Block $block, int $face) : bool{

@@ -58,6 +58,7 @@ use pocketmine\world\World;
 use function count;
 use function get_class;
 use function hash;
+use function max;
 use const PHP_INT_MAX;
 
 class Block{
@@ -569,26 +570,6 @@ class Block{
 	}
 
 	/**
-	 * Returns the weak redstone power emitted by this block toward the given face.
-	 * Weak power does not pass through blocks.
-	 *
-	 * @return int 0-15
-	 */
-	public function getWeakRedstonePower(int $face) : int{
-		return 0;
-	}
-
-	/**
-	 * Returns the strong redstone power emitted by this block toward the given face.
-	 * Strong power can power a block directly, enabling it to power adjacent components.
-	 *
-	 * @return int 0-15
-	 */
-	public function getStrongRedstonePower(int $face) : int{
-		return 0;
-	}
-
-	/**
 	 * Returns whether this block blocks direct sky light from passing through it. This is independent from the light
 	 * filter value, which is used during propagation.
 	 *
@@ -624,6 +605,88 @@ class Block{
 	 */
 	public function canBeFlowedInto() : bool{
 		return false;
+	}
+
+	/**
+	 * Returns the redstone power level emitted by the given face of this block to weakly-powerable targets
+	 * (e.g. redstone wire, lamps, doors).
+	 *
+	 * Solid opaque blocks relay the strongest incoming strong power as weak power, allowing power to be conducted
+	 * through them (e.g. a lever attached to a block powers things on the other side of the block).
+	 *
+	 * @param int $face the face of THIS block from which power is being requested
+	 * @return int 0-15
+	 */
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->isRedstoneConductor() ? $this->getReceivedStrongRedstonePower() : 0;
+	}
+
+	/**
+	 * Returns the redstone power level directly injected into adjacent conductor blocks by the given face of this
+	 * block. Only power sources (levers, torches, repeaters, etc.) emit strong power.
+	 *
+	 * @param int $face the face of THIS block from which power is being requested
+	 * @return int 0-15
+	 */
+	public function getStrongRedstonePower(int $face) : int{
+		return 0;
+	}
+
+	/**
+	 * Returns whether this block can conduct strong redstone power to its neighbours.
+	 */
+	public function isRedstoneConductor() : bool{
+		return $this->isSolid() && !$this->isTransparent();
+	}
+
+	/**
+	 * Returns whether this block drags adjacent movable blocks along when moved by a piston (slime/honey behaviour).
+	 */
+	public function isPistonSticky() : bool{
+		return false;
+	}
+
+	/**
+	 * Returns the strongest strong power level injected into this block by its neighbours.
+	 *
+	 * @return int 0-15
+	 */
+	final public function getReceivedStrongRedstonePower() : int{
+		$power = 0;
+		foreach(Facing::ALL as $face){
+			$side = $this->getSide($face);
+			$power = max($power, $side->getStrongRedstonePower(Facing::opposite($face)));
+			if($power >= 15){
+				break;
+			}
+		}
+		return $power;
+	}
+
+	/**
+	 * Returns the strongest power level received by this block from its neighbours, including weak power and power
+	 * conducted through solid blocks.
+	 *
+	 * @return int 0-15
+	 */
+	final public function getReceivedRedstonePower() : int{
+		$power = 0;
+		foreach(Facing::ALL as $face){
+			$side = $this->getSide($face);
+			$opposite = Facing::opposite($face);
+			$power = max($power, $side->getWeakRedstonePower($opposite), $side->getStrongRedstonePower($opposite));
+			if($power >= 15){
+				break;
+			}
+		}
+		return $power;
+	}
+
+	/**
+	 * Returns whether this block is currently receiving redstone power from any of its neighbours.
+	 */
+	final public function isReceivingRedstonePower() : bool{
+		return $this->getReceivedRedstonePower() > 0;
 	}
 
 	/**

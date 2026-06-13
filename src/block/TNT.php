@@ -36,6 +36,7 @@ use pocketmine\math\RayTraceResult;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\utils\Random;
+use pocketmine\world\gamerule\GameRule;
 use pocketmine\world\sound\IgniteSound;
 use function cos;
 use function sin;
@@ -94,8 +95,17 @@ class TNT extends Opaque{
 		return false;
 	}
 
+	public function onNearbyBlockChange() : void{
+		if($this->isReceivingRedstonePower()){
+			$this->ignite();
+		}
+	}
+
 	public function ignite(int $fuse = 80) : void{
 		$world = $this->position->getWorld();
+		if(!$world->getGameRules()->getBool(GameRule::TNT_EXPLODES)){
+			return;
+		}
 		$world->setBlock($this->position, VanillaBlocks::AIR());
 
 		$mot = (new Random())->nextSignedFloat() * M_PI * 2;

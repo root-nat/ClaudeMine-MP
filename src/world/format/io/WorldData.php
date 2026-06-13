@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\world\format\io;
 
 use pocketmine\math\Vector3;
+use pocketmine\world\Dimension;
 
 interface WorldData{
 
@@ -102,4 +103,25 @@ interface WorldData{
 	 * @param float $level 0.0 - 1.0
 	 */
 	public function setLightningLevel(float $level) : void;
+
+	/**
+	 * Returns the raw game rule values stored for this world.
+	 *
+	 * @return bool[]|int[]
+	 * @phpstan-return array<string, bool|int>
+	 */
+	public function getGameRules() : array;
+
+	/**
+	 * @param bool[]|int[] $rules
+	 * @phpstan-param array<string, bool|int> $rules
+	 */
+	public function setGameRules(array $rules) : void;
+
+	/**
+	 * Returns the dimension this world's terrain belongs to, or null if it was never set.
+	 */
+	public function getDimension() : ?Dimension;
+
+	public function setDimension(Dimension $dimension) : void;
 }

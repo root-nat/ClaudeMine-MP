@@ -27,6 +27,14 @@ use pocketmine\block\utils\RecordType;
 use pocketmine\block\VanillaBlocks as Blocks;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Location;
+use pocketmine\entity\Chicken;
+use pocketmine\entity\Cow;
+use pocketmine\entity\Creeper;
+use pocketmine\entity\Enderman;
+use pocketmine\entity\Pig;
+use pocketmine\entity\Sheep;
+use pocketmine\entity\Skeleton;
+use pocketmine\entity\Spider;
 use pocketmine\entity\Squid;
 use pocketmine\entity\Villager;
 use pocketmine\entity\Zombie;
@@ -197,6 +205,7 @@ final class VanillaItemsInputs extends RegistrySource{
 		self::register("enchanted_book", fn(IID $id) => new EnchantedBook($id, "Enchanted Book", [EnchantmentTags::ALL]));
 		self::register("enchanted_golden_apple", fn(IID $id) => new GoldenAppleEnchanted($id, "Enchanted Golden Apple"));
 		self::register("end_crystal", fn(IID $id) => new EndCrystal($id, "End Crystal"));
+		self::register("ender_eye", fn(IID $id) => new EnderEye($id, "Eye of Ender"));
 		self::register("ender_pearl", fn(IID $id) => new EnderPearl($id, "Ender Pearl"));
 		self::register("experience_bottle", fn(IID $id) => new ExperienceBottle($id, "Bottle o' Enchanting"));
 		self::register("feather", fn(IID $id) => new Item($id, "Feather"));
@@ -349,6 +358,46 @@ final class VanillaItemsInputs extends RegistrySource{
 		self::register("squid_spawn_egg", fn(IID $id) => new class($id, "Squid Spawn Egg") extends SpawnEgg{
 			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
 				return new Squid(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("cow_spawn_egg", fn(IID $id) => new class($id, "Cow Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Cow(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("pig_spawn_egg", fn(IID $id) => new class($id, "Pig Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Pig(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("sheep_spawn_egg", fn(IID $id) => new class($id, "Sheep Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Sheep(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("chicken_spawn_egg", fn(IID $id) => new class($id, "Chicken Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Chicken(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("skeleton_spawn_egg", fn(IID $id) => new class($id, "Skeleton Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Skeleton(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("creeper_spawn_egg", fn(IID $id) => new class($id, "Creeper Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Creeper(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("spider_spawn_egg", fn(IID $id) => new class($id, "Spider Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Spider(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("enderman_spawn_egg", fn(IID $id) => new class($id, "Enderman Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Enderman(Location::fromObject($pos, $world, $yaw, $pitch));
 			}
 		});
 		self::register("villager_spawn_egg", fn(IID $id) => new class($id, "Villager Spawn Egg") extends SpawnEgg{

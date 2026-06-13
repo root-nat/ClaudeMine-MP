@@ -26,6 +26,8 @@ namespace pocketmine\world\format\io\data;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\IntTag;
+use pocketmine\nbt\tag\StringTag;
+use pocketmine\world\Dimension;
 use pocketmine\world\format\io\exception\CorruptedWorldException;
 use pocketmine\world\format\io\exception\UnsupportedWorldFormatException;
 use pocketmine\world\format\io\WorldData;
@@ -40,6 +42,7 @@ abstract class BaseNbtWorldData implements WorldData{
 	protected const TAG_SPAWN_X = "SpawnX";
 	protected const TAG_SPAWN_Y = "SpawnY";
 	protected const TAG_SPAWN_Z = "SpawnZ";
+	protected const TAG_PM_DIMENSION = "PMMPDimension";
 
 	protected CompoundTag $compoundTag;
 
@@ -108,6 +111,15 @@ abstract class BaseNbtWorldData implements WorldData{
 
 	public function getCompoundTag() : CompoundTag{
 		return $this->compoundTag;
+	}
+
+	public function getDimension() : ?Dimension{
+		$tag = $this->compoundTag->getTag(self::TAG_PM_DIMENSION);
+		return $tag instanceof StringTag ? Dimension::fromSaveName($tag->getValue()) : null;
+	}
+
+	public function setDimension(Dimension $dimension) : void{
+		$this->compoundTag->setString(self::TAG_PM_DIMENSION, $dimension->getSaveName());
 	}
 
 	/* The below are common between PC and PE */

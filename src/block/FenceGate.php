@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
+use pocketmine\block\utils\RedstoneComponentHelper;
 use pocketmine\block\utils\SupportType;
 use pocketmine\block\utils\WoodMaterial;
 use pocketmine\block\utils\WoodTypeTrait;
@@ -92,10 +93,24 @@ class FenceGate extends Transparent implements HorizontalFacing, WoodMaterial{
 	}
 
 	public function onNearbyBlockChange() : void{
+		$world = $this->position->getWorld();
+		$changed = false;
+
 		$inWall = $this->checkInWall();
 		if($inWall !== $this->inWall){
 			$this->inWall = $inWall;
-			$this->position->getWorld()->setBlock($this->position, $this);
+			$changed = true;
+		}
+
+		$powered = $this->isReceivingRedstonePower();
+		if($powered !== $this->open && ($powered || RedstoneComponentHelper::hasAdjacentComponent($this))){
+			$this->open = $powered;
+			$changed = true;
+			$world->addSound($this->position, new DoorSound());
+		}
+
+		if($changed){
+			$world->setBlock($this->position, $this);
 		}
 	}
 

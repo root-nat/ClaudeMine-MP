@@ -30,6 +30,7 @@ use pocketmine\block\utils\SupportType;
 use pocketmine\event\block\BlockBurnEvent;
 use pocketmine\math\Facing;
 use pocketmine\world\format\Chunk;
+use pocketmine\world\gamerule\GameRule;
 use pocketmine\world\World;
 use function intdiv;
 use function max;
@@ -66,6 +67,16 @@ class Fire extends BaseFire implements Ageable{
 	}
 
 	public function onRandomTick() : void{
+		$world = $this->position->getWorld();
+		if(!$world->getGameRules()->getBool(GameRule::DO_FIRE_TICK)){
+			return;
+		}
+
+		if($world->getWeather()->isRaining() && $this->isExposedToRain()){
+			$world->setBlock($this->position, VanillaBlocks::AIR());
+			return;
+		}
+
 		$down = $this->getSide(Facing::DOWN);
 
 		$result = null;
@@ -76,7 +87,6 @@ class Fire extends BaseFire implements Ageable{
 		$canSpread = true;
 
 		if(!$down->burnsForever()){
-			//TODO: check rain
 			if($this->age === self::MAX_AGE){
 				if(!$down->isFlammable() && mt_rand(0, 3) === 3){ //1/4 chance to extinguish
 					$canSpread = false;
@@ -90,7 +100,6 @@ class Fire extends BaseFire implements Ageable{
 			}
 		}
 
-		$world = $this->position->getWorld();
 		if($result !== null){
 			$world->setBlock($this->position, $result);
 		}
@@ -101,6 +110,15 @@ class Fire extends BaseFire implements Ageable{
 			$this->burnBlocksAround();
 			$this->spreadFire();
 		}
+	}
+
+	private function isExposedToRain() : bool{
+		$world = $this->position->getWorld();
+		if(!$world->getDimension()->hasWeather()){
+			return false;
+		}
+		$highest = $world->getHighestBlockAt($this->position->getFloorX(), $this->position->getFloorZ());
+		return $highest === null || $highest <= $this->position->getFloorY();
 	}
 
 	public function onScheduledUpdate() : void{

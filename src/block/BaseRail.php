@@ -72,6 +72,12 @@ abstract class BaseRail extends Flowable{
 	abstract protected function setShapeFromConnections(array $connections) : void;
 
 	/**
+	 * Returns the current rail shape value. This corresponds to a key in {@link RailConnectionInfo::CONNECTIONS} or
+	 * {@link RailConnectionInfo::CURVE_CONNECTIONS}.
+	 */
+	abstract public function getShape() : int;
+
+	/**
 	 * Returns the connection directions of this rail (depending on the current block state)
 	 *
 	 * @return int[]

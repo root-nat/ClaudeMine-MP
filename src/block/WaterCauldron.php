@@ -39,8 +39,6 @@ use pocketmine\item\SplashPotion;
 use pocketmine\item\VanillaItems;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
-use pocketmine\world\particle\PotionSplashParticle;
-use pocketmine\world\particle\SplashParticle;
 use pocketmine\world\sound\CauldronAddDyeSound;
 use pocketmine\world\sound\CauldronCleanItemSound;
 use pocketmine\world\sound\CauldronDyeItemSound;
@@ -187,7 +185,7 @@ final class WaterCauldron extends FillableCauldron{
 	public function onEntityInside(Entity $entity) : bool{
 		if($entity->isOnFire()){
 			$entity->extinguish(EntityExtinguishEvent::CAUSE_WATER_CAULDRON);
-			$this->position->getWorld()->addParticle($entity->getPosition(), new SplashParticle());
+			//TODO: particles
 
 			$this->position->getWorld()->setBlock($this->position, $this->withFillLevel($this->getFillLevel() - self::ENTITY_EXTINGUISH_USE_AMOUNT));
 		}
@@ -201,7 +199,7 @@ final class WaterCauldron extends FillableCauldron{
 			$world = $this->position->getWorld();
 			if($world->getBlock($this->position->up())->getTypeId() === BlockTypeIds::WATER){
 				if($hasCustomWaterColor){
-					$world->addParticle($this->position->add(0.5, 0.5, 0.5), new PotionSplashParticle($this->customWaterColor ?? PotionSplashParticle::DEFAULT_COLOR()));
+					//TODO: particles
 				}
 				$world->setBlock($this->position, $this->setCustomWaterColor(null)->setFillLevel(FillableCauldron::MAX_FILL_LEVEL));
 				$world->addSound($this->position->add(0.5, 0.5, 0.5), $this->getFillSound());

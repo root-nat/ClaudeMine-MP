@@ -33,6 +33,8 @@ class Hopper extends Spawnable implements Container, Nameable{
 	use ContainerTrait;
 	use NameableTrait;
 
+	public const TRANSFER_COOLDOWN_TICKS = 8;
+
 	private const TAG_TRANSFER_COOLDOWN = "TransferCooldown";
 
 	private HopperInventory $inventory;
@@ -41,6 +43,7 @@ class Hopper extends Spawnable implements Container, Nameable{
 	public function __construct(World $world, Vector3 $pos){
 		parent::__construct($world, $pos);
 		$this->inventory = new HopperInventory($this->position);
+		$world->scheduleDelayedBlockUpdate($this->position, self::TRANSFER_COOLDOWN_TICKS);
 	}
 
 	public function readSaveData(CompoundTag $nbt) : void{

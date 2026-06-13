@@ -113,6 +113,7 @@ final class VanillaItems{
 	private static Item $_mCHEMICAL_WATER;
 	private static HangingSign $_mCHERRY_HANGING_SIGN;
 	private static ItemBlockWallOrFloor $_mCHERRY_SIGN;
+	private static SpawnEgg $_mCHICKEN_SPAWN_EGG;
 	private static ChorusFruit $_mCHORUS_FRUIT;
 	private static Item $_mCLAY;
 	private static Clock $_mCLOCK;
@@ -140,6 +141,8 @@ final class VanillaItems{
 	private static Shovel $_mCOPPER_SHOVEL;
 	private static Sword $_mCOPPER_SWORD;
 	private static CoralFan $_mCORAL_FAN;
+	private static SpawnEgg $_mCOW_SPAWN_EGG;
+	private static SpawnEgg $_mCREEPER_SPAWN_EGG;
 	private static HangingSign $_mCRIMSON_HANGING_SIGN;
 	private static ItemBlockWallOrFloor $_mCRIMSON_SIGN;
 	private static Boat $_mDARK_OAK_BOAT;
@@ -165,6 +168,8 @@ final class VanillaItems{
 	private static Item $_mEMERALD;
 	private static EnchantedBook $_mENCHANTED_BOOK;
 	private static GoldenAppleEnchanted $_mENCHANTED_GOLDEN_APPLE;
+	private static SpawnEgg $_mENDERMAN_SPAWN_EGG;
+	private static EnderEye $_mENDER_EYE;
 	private static EnderPearl $_mENDER_PEARL;
 	private static EndCrystal $_mEND_CRYSTAL;
 	private static ExperienceBottle $_mEXPERIENCE_BOTTLE;
@@ -262,6 +267,7 @@ final class VanillaItems{
 	private static ItemBlockWallOrFloor $_mPALE_OAK_SIGN;
 	private static Item $_mPAPER;
 	private static Item $_mPHANTOM_MEMBRANE;
+	private static SpawnEgg $_mPIG_SPAWN_EGG;
 	private static PitcherPod $_mPITCHER_POD;
 	private static PoisonousPotato $_mPOISONOUS_POTATO;
 	private static Item $_mPOPPED_CHORUS_FRUIT;
@@ -315,12 +321,15 @@ final class VanillaItems{
 	private static Item $_mSENTRY_ARMOR_TRIM_SMITHING_TEMPLATE;
 	private static Item $_mSHAPER_ARMOR_TRIM_SMITHING_TEMPLATE;
 	private static Shears $_mSHEARS;
+	private static SpawnEgg $_mSHEEP_SPAWN_EGG;
 	private static Item $_mSHULKER_SHELL;
 	private static Item $_mSILENCE_ARMOR_TRIM_SMITHING_TEMPLATE;
+	private static SpawnEgg $_mSKELETON_SPAWN_EGG;
 	private static Item $_mSLIMEBALL;
 	private static Item $_mSNOUT_ARMOR_TRIM_SMITHING_TEMPLATE;
 	private static Snowball $_mSNOWBALL;
 	private static SpiderEye $_mSPIDER_EYE;
+	private static SpawnEgg $_mSPIDER_SPAWN_EGG;
 	private static Item $_mSPIRE_ARMOR_TRIM_SMITHING_TEMPLATE;
 	private static SplashPotion $_mSPLASH_POTION;
 	private static Boat $_mSPRUCE_BOAT;
@@ -471,6 +480,7 @@ final class VanillaItems{
 			"chemical_water" => fn(Item $v) => self::$_mCHEMICAL_WATER = $v,
 			"cherry_hanging_sign" => fn(HangingSign $v) => self::$_mCHERRY_HANGING_SIGN = $v,
 			"cherry_sign" => fn(ItemBlockWallOrFloor $v) => self::$_mCHERRY_SIGN = $v,
+			"chicken_spawn_egg" => fn(SpawnEgg $v) => self::$_mCHICKEN_SPAWN_EGG = $v,
 			"chorus_fruit" => fn(ChorusFruit $v) => self::$_mCHORUS_FRUIT = $v,
 			"clay" => fn(Item $v) => self::$_mCLAY = $v,
 			"clock" => fn(Clock $v) => self::$_mCLOCK = $v,
@@ -498,6 +508,8 @@ final class VanillaItems{
 			"copper_shovel" => fn(Shovel $v) => self::$_mCOPPER_SHOVEL = $v,
 			"copper_sword" => fn(Sword $v) => self::$_mCOPPER_SWORD = $v,
 			"coral_fan" => fn(CoralFan $v) => self::$_mCORAL_FAN = $v,
+			"cow_spawn_egg" => fn(SpawnEgg $v) => self::$_mCOW_SPAWN_EGG = $v,
+			"creeper_spawn_egg" => fn(SpawnEgg $v) => self::$_mCREEPER_SPAWN_EGG = $v,
 			"crimson_hanging_sign" => fn(HangingSign $v) => self::$_mCRIMSON_HANGING_SIGN = $v,
 			"crimson_sign" => fn(ItemBlockWallOrFloor $v) => self::$_mCRIMSON_SIGN = $v,
 			"dark_oak_boat" => fn(Boat $v) => self::$_mDARK_OAK_BOAT = $v,
@@ -523,6 +535,8 @@ final class VanillaItems{
 			"emerald" => fn(Item $v) => self::$_mEMERALD = $v,
 			"enchanted_book" => fn(EnchantedBook $v) => self::$_mENCHANTED_BOOK = $v,
 			"enchanted_golden_apple" => fn(GoldenAppleEnchanted $v) => self::$_mENCHANTED_GOLDEN_APPLE = $v,
+			"enderman_spawn_egg" => fn(SpawnEgg $v) => self::$_mENDERMAN_SPAWN_EGG = $v,
+			"ender_eye" => fn(EnderEye $v) => self::$_mENDER_EYE = $v,
 			"ender_pearl" => fn(EnderPearl $v) => self::$_mENDER_PEARL = $v,
 			"end_crystal" => fn(EndCrystal $v) => self::$_mEND_CRYSTAL = $v,
 			"experience_bottle" => fn(ExperienceBottle $v) => self::$_mEXPERIENCE_BOTTLE = $v,
@@ -620,6 +634,7 @@ final class VanillaItems{
 			"pale_oak_sign" => fn(ItemBlockWallOrFloor $v) => self::$_mPALE_OAK_SIGN = $v,
 			"paper" => fn(Item $v) => self::$_mPAPER = $v,
 			"phantom_membrane" => fn(Item $v) => self::$_mPHANTOM_MEMBRANE = $v,
+			"pig_spawn_egg" => fn(SpawnEgg $v) => self::$_mPIG_SPAWN_EGG = $v,
 			"pitcher_pod" => fn(PitcherPod $v) => self::$_mPITCHER_POD = $v,
 			"poisonous_potato" => fn(PoisonousPotato $v) => self::$_mPOISONOUS_POTATO = $v,
 			"popped_chorus_fruit" => fn(Item $v) => self::$_mPOPPED_CHORUS_FRUIT = $v,
@@ -673,12 +688,15 @@ final class VanillaItems{
 			"sentry_armor_trim_smithing_template" => fn(Item $v) => self::$_mSENTRY_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
 			"shaper_armor_trim_smithing_template" => fn(Item $v) => self::$_mSHAPER_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
 			"shears" => fn(Shears $v) => self::$_mSHEARS = $v,
+			"sheep_spawn_egg" => fn(SpawnEgg $v) => self::$_mSHEEP_SPAWN_EGG = $v,
 			"shulker_shell" => fn(Item $v) => self::$_mSHULKER_SHELL = $v,
 			"silence_armor_trim_smithing_template" => fn(Item $v) => self::$_mSILENCE_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
+			"skeleton_spawn_egg" => fn(SpawnEgg $v) => self::$_mSKELETON_SPAWN_EGG = $v,
 			"slimeball" => fn(Item $v) => self::$_mSLIMEBALL = $v,
 			"snout_armor_trim_smithing_template" => fn(Item $v) => self::$_mSNOUT_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
 			"snowball" => fn(Snowball $v) => self::$_mSNOWBALL = $v,
 			"spider_eye" => fn(SpiderEye $v) => self::$_mSPIDER_EYE = $v,
+			"spider_spawn_egg" => fn(SpawnEgg $v) => self::$_mSPIDER_SPAWN_EGG = $v,
 			"spire_armor_trim_smithing_template" => fn(Item $v) => self::$_mSPIRE_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
 			"splash_potion" => fn(SplashPotion $v) => self::$_mSPLASH_POTION = $v,
 			"spruce_boat" => fn(Boat $v) => self::$_mSPRUCE_BOAT = $v,
@@ -1133,6 +1151,11 @@ final class VanillaItems{
 		return clone self::$_mCHERRY_SIGN;
 	}
 
+	public static function CHICKEN_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mCHICKEN_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mCHICKEN_SPAWN_EGG;
+	}
+
 	public static function CHORUS_FRUIT() : ChorusFruit{
 		if(!isset(self::$_mCHORUS_FRUIT)){ self::init(); }
 		return clone self::$_mCHORUS_FRUIT;
@@ -1268,6 +1291,16 @@ final class VanillaItems{
 		return clone self::$_mCORAL_FAN;
 	}
 
+	public static function COW_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mCOW_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mCOW_SPAWN_EGG;
+	}
+
+	public static function CREEPER_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mCREEPER_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mCREEPER_SPAWN_EGG;
+	}
+
 	public static function CRIMSON_HANGING_SIGN() : HangingSign{
 		if(!isset(self::$_mCRIMSON_HANGING_SIGN)){ self::init(); }
 		return clone self::$_mCRIMSON_HANGING_SIGN;
@@ -1391,6 +1424,16 @@ final class VanillaItems{
 	public static function ENCHANTED_GOLDEN_APPLE() : GoldenAppleEnchanted{
 		if(!isset(self::$_mENCHANTED_GOLDEN_APPLE)){ self::init(); }
 		return clone self::$_mENCHANTED_GOLDEN_APPLE;
+	}
+
+	public static function ENDERMAN_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mENDERMAN_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mENDERMAN_SPAWN_EGG;
+	}
+
+	public static function ENDER_EYE() : EnderEye{
+		if(!isset(self::$_mENDER_EYE)){ self::init(); }
+		return clone self::$_mENDER_EYE;
 	}
 
 	public static function ENDER_PEARL() : EnderPearl{
@@ -1878,6 +1921,11 @@ final class VanillaItems{
 		return clone self::$_mPHANTOM_MEMBRANE;
 	}
 
+	public static function PIG_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mPIG_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mPIG_SPAWN_EGG;
+	}
+
 	public static function PITCHER_POD() : PitcherPod{
 		if(!isset(self::$_mPITCHER_POD)){ self::init(); }
 		return clone self::$_mPITCHER_POD;
@@ -2143,6 +2191,11 @@ final class VanillaItems{
 		return clone self::$_mSHEARS;
 	}
 
+	public static function SHEEP_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mSHEEP_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mSHEEP_SPAWN_EGG;
+	}
+
 	public static function SHULKER_SHELL() : Item{
 		if(!isset(self::$_mSHULKER_SHELL)){ self::init(); }
 		return clone self::$_mSHULKER_SHELL;
@@ -2151,6 +2204,11 @@ final class VanillaItems{
 	public static function SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE() : Item{
 		if(!isset(self::$_mSILENCE_ARMOR_TRIM_SMITHING_TEMPLATE)){ self::init(); }
 		return clone self::$_mSILENCE_ARMOR_TRIM_SMITHING_TEMPLATE;
+	}
+
+	public static function SKELETON_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mSKELETON_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mSKELETON_SPAWN_EGG;
 	}
 
 	public static function SLIMEBALL() : Item{
@@ -2171,6 +2229,11 @@ final class VanillaItems{
 	public static function SPIDER_EYE() : SpiderEye{
 		if(!isset(self::$_mSPIDER_EYE)){ self::init(); }
 		return clone self::$_mSPIDER_EYE;
+	}
+
+	public static function SPIDER_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mSPIDER_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mSPIDER_SPAWN_EGG;
 	}
 
 	public static function SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE() : Item{

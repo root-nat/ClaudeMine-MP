@@ -27,31 +27,14 @@ use pocketmine\block\utils\Lightable;
 use pocketmine\block\utils\PoweredByRedstone;
 use pocketmine\block\utils\PoweredByRedstoneTrait;
 use pocketmine\data\runtime\RuntimeDataDescriber;
-use pocketmine\math\Facing;
 
 class RedstoneLamp extends Opaque implements PoweredByRedstone, Lightable{
 	use PoweredByRedstoneTrait;
 
+	private const TURN_OFF_DELAY_TICKS = 4;
+
 	protected function describeBlockOnlyState(RuntimeDataDescriber $w) : void{
 		$w->bool($this->powered);
-	}
-
-	public function onNearbyBlockChange() : void{
-		$powered = $this->isReceivingPower();
-		if($this->powered !== $powered){
-			$this->powered = $powered;
-			$this->position->getWorld()->setBlock($this->position, $this);
-		}
-	}
-
-	private function isReceivingPower() : bool{
-		foreach(Facing::ALL as $face){
-			$neighbor = $this->getSide($face);
-			if($neighbor->getWeakRedstonePower(Facing::opposite($face)) > 0 || $neighbor->getStrongRedstonePower(Facing::opposite($face)) > 0){
-				return true;
-			}
-		}
-		return false;
 	}
 
 	public function getLightLevel() : int{
@@ -66,5 +49,27 @@ class RedstoneLamp extends Opaque implements PoweredByRedstone, Lightable{
 	public function setLit(bool $lit = true) : self{
 		$this->powered = $lit;
 		return $this;
+	}
+
+	public function onPostPlace() : void{
+		$this->onNearbyBlockChange();
+	}
+
+	public function onNearbyBlockChange() : void{
+		$world = $this->position->getWorld();
+		$receiving = $this->isReceivingRedstonePower();
+		if($receiving && !$this->powered){
+			$this->powered = true;
+			$world->setBlock($this->position, $this);
+		}elseif(!$receiving && $this->powered){
+			$world->scheduleDelayedBlockUpdate($this->position, self::TURN_OFF_DELAY_TICKS);
+		}
+	}
+
+	public function onScheduledUpdate() : void{
+		if($this->powered && !$this->isReceivingRedstonePower()){
+			$this->powered = false;
+			$this->position->getWorld()->setBlock($this->position, $this);
+		}
 	}
 }

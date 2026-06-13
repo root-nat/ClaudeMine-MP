@@ -46,7 +46,7 @@ class Villager extends Living implements Ageable{
 	private int $profession = self::PROFESSION_FARMER;
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{
-		return new EntitySizeInfo(1.9, 0.6, 1.62);
+		return new EntitySizeInfo(1.9, 0.6); //TODO: eye height??
 	}
 
 	public function getName() : string{
@@ -77,10 +77,7 @@ class Villager extends Living implements Ageable{
 	 * Sets the villager profession
 	 */
 	public function setProfession(int $profession) : void{
-		if($profession < self::PROFESSION_FARMER || $profession > self::PROFESSION_BUTCHER){
-			throw new \InvalidArgumentException("Profession must be between " . self::PROFESSION_FARMER . " and " . self::PROFESSION_BUTCHER);
-		}
-		$this->profession = $profession;
+		$this->profession = $profession; //TODO: validation
 		$this->networkPropertiesDirty = true;
 	}
 

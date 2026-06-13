@@ -32,13 +32,17 @@ use pocketmine\utils\Filesystem;
 use pocketmine\utils\Utils;
 use pocketmine\VersionInfo;
 use pocketmine\world\format\io\exception\CorruptedWorldException;
+use pocketmine\world\gamerule\GameRule;
 use pocketmine\world\generator\GeneratorManager;
 use pocketmine\world\World;
 use pocketmine\world\WorldCreationOptions;
 use Symfony\Component\Filesystem\Path;
 use function ceil;
 use function file_put_contents;
+use function is_bool;
+use function is_int;
 use function microtime;
+use function preg_match;
 use function zlib_decode;
 use function zlib_encode;
 use const ZLIB_ENCODING_GZIP;
@@ -172,5 +176,47 @@ class JavaWorldData extends BaseNbtWorldData{
 
 	public function setLightningLevel(float $level) : void{
 		$this->compoundTag->setByte(self::TAG_THUNDERING, (int) ceil($level));
+	}
+
+	public function getGameRules() : array{
+		$tag = $this->compoundTag->getTag(self::TAG_GAME_RULES);
+		if(!($tag instanceof CompoundTag)){
+			return [];
+		}
+		$result = [];
+		foreach(GameRule::cases() as $rule){
+			$ruleTag = $tag->getTag($rule->value);
+			if(!($ruleTag instanceof StringTag)){
+				continue;
+			}
+			$value = $ruleTag->getValue();
+			if($rule->isIntRule()){
+				if(preg_match('/^-?\d+$/', $value) === 1){
+					$result[$rule->value] = (int) $value;
+				}
+			}else{
+				$result[$rule->value] = $value === "true";
+			}
+		}
+		return $result;
+	}
+
+	public function setGameRules(array $rules) : void{
+		$tag = $this->compoundTag->getTag(self::TAG_GAME_RULES);
+		if(!($tag instanceof CompoundTag)){
+			$tag = new CompoundTag();
+		}
+		foreach(Utils::stringifyKeys($rules) as $name => $value){
+			$rule = GameRule::tryFrom($name);
+			if($rule === null){
+				continue;
+			}
+			if(is_int($value) && $rule->isIntRule()){
+				$tag->setString($rule->value, (string) $value);
+			}elseif(is_bool($value) && !$rule->isIntRule()){
+				$tag->setString($rule->value, $value ? "true" : "false");
+			}
+		}
+		$this->compoundTag->setTag(self::TAG_GAME_RULES, $tag);
 	}
 }

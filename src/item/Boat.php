@@ -23,6 +23,12 @@ declare(strict_types=1);
 
 namespace pocketmine\item;
 
+use pocketmine\block\Block;
+use pocketmine\entity\Location;
+use pocketmine\entity\object\Boat as BoatEntity;
+use pocketmine\math\Vector3;
+use pocketmine\player\Player;
+
 class Boat extends Item{
 	private BoatType $boatType;
 
@@ -43,5 +49,25 @@ class Boat extends Item{
 		return 1;
 	}
 
-	//TODO
+	public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
+		$world = $player->getWorld();
+		$spawnPos = $blockClicked->getPosition()->add(0.5, 1, 0.5);
+		$entity = new BoatEntity(Location::fromObject($spawnPos, $world, $player->getLocation()->getYaw(), 0));
+		$entity->setWoodType(match($this->boatType){
+			BoatType::OAK => 0,
+			BoatType::SPRUCE => 1,
+			BoatType::BIRCH => 2,
+			BoatType::JUNGLE => 3,
+			BoatType::ACACIA => 4,
+			BoatType::DARK_OAK => 5,
+			BoatType::MANGROVE => 6,
+		});
+		if($this->hasCustomName()){
+			$entity->setNameTag($this->getCustomName());
+		}
+		$entity->spawnToAll();
+		$this->pop();
+
+		return ItemUseResult::SUCCESS;
+	}
 }

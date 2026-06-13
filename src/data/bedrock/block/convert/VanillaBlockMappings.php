@@ -65,7 +65,12 @@ use pocketmine\block\Lectern;
 use pocketmine\block\Lever;
 use pocketmine\block\Light;
 use pocketmine\block\MobHead;
+use pocketmine\block\Dispenser;
+use pocketmine\block\Dropper;
 use pocketmine\block\NetherPortal;
+use pocketmine\block\Observer;
+use pocketmine\block\Piston;
+use pocketmine\block\PistonArmCollision;
 use pocketmine\block\NetherVines;
 use pocketmine\block\NetherWartPlant;
 use pocketmine\block\PinkPetals;
@@ -397,6 +402,22 @@ final class VanillaBlockMappings{
 		$reg->mapSimple(Blocks::NETHER_REACTOR_CORE(), Ids::NETHERREACTOR);
 		$reg->mapSimple(Blocks::NETHER_WART_BLOCK(), Ids::NETHER_WART_BLOCK);
 		$reg->mapSimple(Blocks::NOTE_BLOCK(), Ids::NOTEBLOCK);
+		$reg->mapModel(Model::create(Blocks::OBSERVER(), Ids::OBSERVER)->properties([
+			new ValueFromStringProperty(
+				StateNames::MC_FACING_DIRECTION,
+				IntFromRawStateMap::string([
+					Facing::DOWN => StringValues::MC_FACING_DIRECTION_DOWN,
+					Facing::UP => StringValues::MC_FACING_DIRECTION_UP,
+					Facing::NORTH => StringValues::MC_FACING_DIRECTION_NORTH,
+					Facing::SOUTH => StringValues::MC_FACING_DIRECTION_SOUTH,
+					Facing::WEST => StringValues::MC_FACING_DIRECTION_WEST,
+					Facing::EAST => StringValues::MC_FACING_DIRECTION_EAST,
+				]),
+				fn(Observer $b) => $b->getFacing(),
+				fn(Observer $b, int $v) => $b->setFacing($v)
+			),
+			new BoolProperty(StateNames::POWERED_BIT, fn(Observer $b) => $b->isPowered(), fn(Observer $b, bool $v) => $b->setPowered($v))
+		]));
 		$reg->mapSimple(Blocks::OBSIDIAN(), Ids::OBSIDIAN);
 		$reg->mapSimple(Blocks::PACKED_ICE(), Ids::PACKED_ICE);
 		$reg->mapSimple(Blocks::PACKED_MUD(), Ids::PACKED_MUD);
@@ -443,6 +464,7 @@ final class VanillaBlockMappings{
 		$reg->mapSimple(Blocks::STONE_BRICKS(), Ids::STONE_BRICKS);
 		$reg->mapSimple(Blocks::STRUCTURE_VOID(), Ids::STRUCTURE_VOID);
 		$reg->mapSimple(Blocks::TALL_GRASS(), Ids::SHORT_GRASS);  //no, this is not a typo - tall_grass is now the double block, just to be confusing :(
+		$reg->mapSimple(Blocks::TARGET(), Ids::TARGET);
 		$reg->mapSimple(Blocks::TINTED_GLASS(), Ids::TINTED_GLASS);
 		$reg->mapSimple(Blocks::TORCHFLOWER(), Ids::TORCHFLOWER);
 		$reg->mapSimple(Blocks::TUFF(), Ids::TUFF);
@@ -1342,6 +1364,14 @@ final class VanillaBlockMappings{
 
 		//D
 		$reg->mapModel(Model::create(Blocks::DEEPSLATE(), Ids::DEEPSLATE)->properties([$commonProperties->pillarAxis]));
+		$reg->mapModel(Model::create(Blocks::DISPENSER(), Ids::DISPENSER)->properties([
+			$commonProperties->anyFacingClassic,
+			new BoolProperty(StateNames::TRIGGERED_BIT, fn(Dispenser $b) => $b->isPowered(), fn(Dispenser $b, bool $v) => $b->setPowered($v))
+		]));
+		$reg->mapModel(Model::create(Blocks::DROPPER(), Ids::DROPPER)->properties([
+			$commonProperties->anyFacingClassic,
+			new BoolProperty(StateNames::TRIGGERED_BIT, fn(Dropper $b) => $b->isPowered(), fn(Dropper $b, bool $v) => $b->setPowered($v))
+		]));
 		$reg->mapModel(Model::create(Blocks::DETECTOR_RAIL(), Ids::DETECTOR_RAIL)->properties([
 			new BoolProperty(StateNames::RAIL_DATA_BIT, fn(DetectorRail $b) => $b->isActivated(), fn(DetectorRail $b, bool $v) => $b->setActivated($v)),
 			new IntProperty(StateNames::RAIL_DIRECTION, 0, 5, fn(StraightOnlyRail $b) => $b->getShape(), fn(StraightOnlyRail $b, int $v) => $b->setShape($v)) //TODO: shared with ActivatorRail
@@ -1349,6 +1379,7 @@ final class VanillaBlockMappings{
 
 		//E
 		$reg->mapModel(Model::create(Blocks::ENDER_CHEST(), Ids::ENDER_CHEST)->properties([$commonProperties->horizontalFacingCardinal]));
+		$reg->mapSimple(Blocks::END_PORTAL(), Ids::END_PORTAL);
 		$reg->mapModel(Model::create(Blocks::END_PORTAL_FRAME(), Ids::END_PORTAL_FRAME)->properties([
 			new BoolProperty(StateNames::END_PORTAL_EYE_BIT, fn(EndPortalFrame $b) => $b->hasEye(), fn(EndPortalFrame $b, bool $v) => $b->setEye($v)),
 			$commonProperties->horizontalFacingCardinal
@@ -1428,6 +1459,22 @@ final class VanillaBlockMappings{
 		]));
 		$reg->mapModel(Model::create(Blocks::PITCHER_PLANT(), Ids::PITCHER_PLANT)->properties([
 			new BoolProperty(StateNames::UPPER_BLOCK_BIT, fn(DoublePlant $b) => $b->isTop(), fn(DoublePlant $b, bool $v) => $b->setTop($v)), //TODO: don't we have helpers for this?
+		]));
+		$pistonFacing = fn(Piston $b) => $b->getFacing();
+		$pistonSetFacing = fn(Piston $b, int $v) => $b->setFacing($v);
+		$reg->mapModel(Model::create(Blocks::PISTON(), Ids::PISTON)->properties([
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $pistonFacing, $pistonSetFacing)
+		]));
+		$reg->mapModel(Model::create(Blocks::STICKY_PISTON(), Ids::STICKY_PISTON)->properties([
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $pistonFacing, $pistonSetFacing)
+		]));
+		$armFacing = fn(PistonArmCollision $b) => $b->getFacing();
+		$armSetFacing = fn(PistonArmCollision $b, int $v) => $b->setFacing($v);
+		$reg->mapModel(Model::create(Blocks::PISTON_ARM_COLLISION(), Ids::PISTON_ARM_COLLISION)->properties([
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $armFacing, $armSetFacing)
+		]));
+		$reg->mapModel(Model::create(Blocks::STICKY_PISTON_ARM_COLLISION(), Ids::STICKY_PISTON_ARM_COLLISION)->properties([
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $armFacing, $armSetFacing)
 		]));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BASALT(), Ids::POLISHED_BASALT)->properties([$commonProperties->pillarAxis]));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BLACKSTONE_BUTTON(), Ids::POLISHED_BLACKSTONE_BUTTON)->properties($commonProperties->buttonProperties));

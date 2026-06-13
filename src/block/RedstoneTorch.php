@@ -31,6 +31,8 @@ use pocketmine\math\Facing;
 class RedstoneTorch extends Torch implements Lightable{
 	use LightableTrait;
 
+	private const TOGGLE_DELAY_TICKS = 2;
+
 	public function __construct(BlockIdentifier $idInfo, string $name, BlockTypeInfo $typeInfo){
 		$this->lit = true;
 		parent::__construct($idInfo, $name, $typeInfo);
@@ -45,11 +47,42 @@ class RedstoneTorch extends Torch implements Lightable{
 		return $this->lit ? 7 : 0;
 	}
 
+	public function onPostPlace() : void{
+		$this->scheduleStateCheck();
+	}
+
+	public function onNearbyBlockChange() : void{
+		parent::onNearbyBlockChange();
+		if($this->position->getWorld()->getBlock($this->position)->hasSameTypeId($this)){
+			$this->scheduleStateCheck();
+		}
+	}
+
+	public function onScheduledUpdate() : void{
+		$shouldBeLit = !$this->getSupportBlock()->isReceivingRedstonePower();
+		if($shouldBeLit !== $this->lit){
+			$this->lit = $shouldBeLit;
+			$world = $this->position->getWorld();
+			$world->setBlock($this->position, $this);
+			$world->notifyNeighbourBlockUpdate($this->position->up());
+		}
+	}
+
 	public function getWeakRedstonePower(int $face) : int{
-		return ($this->lit && $face !== Facing::opposite($this->facing)) ? 15 : 0;
+		return $this->lit && $face !== Facing::opposite($this->facing) ? 15 : 0;
 	}
 
 	public function getStrongRedstonePower(int $face) : int{
-		return ($this->lit && $face === Facing::UP) ? 15 : 0;
+		return $this->lit && $face === Facing::UP ? 15 : 0;
+	}
+
+	private function getSupportBlock() : Block{
+		return $this->getSide(Facing::opposite($this->facing));
+	}
+
+	private function scheduleStateCheck() : void{
+		if((!$this->getSupportBlock()->isReceivingRedstonePower()) !== $this->lit){
+			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, self::TOGGLE_DELAY_TICKS);
+		}
 	}
 }

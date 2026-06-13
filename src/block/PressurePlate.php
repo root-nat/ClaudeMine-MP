@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
+use pocketmine\block\utils\AnalogRedstoneSignalEmitter;
 use pocketmine\block\utils\StaticSupportTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\entity\Entity;
@@ -63,10 +64,6 @@ abstract class PressurePlate extends Transparent{
 
 	private function canBeSupportedAt(Block $block) : bool{
 		return $block->getAdjacentSupportType(Facing::DOWN) !== SupportType::NONE;
-	}
-
-	public function getWeakRedstonePower(int $face) : int{
-		return $this->hasOutputSignal() ? 15 : 0;
 	}
 
 	public function hasEntityCollision() : bool{
@@ -149,9 +146,23 @@ abstract class PressurePlate extends Transparent{
 					);
 				}
 			}
+			if($pressedChange !== null){
+				$world->notifyNeighbourBlockUpdate($this->position->down());
+			}
 			if($pressedChange ?? $this->hasOutputSignal()){
 				$world->scheduleDelayedBlockUpdate($this->position, $this->deactivationDelayTicks);
 			}
 		}
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		if(!$this->hasOutputSignal()){
+			return 0;
+		}
+		return $this instanceof AnalogRedstoneSignalEmitter ? $this->getOutputSignalStrength() : 15;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		return $face === Facing::DOWN ? $this->getWeakRedstonePower($face) : 0;
 	}
 }

@@ -65,6 +65,7 @@ use pocketmine\utils\Limits;
 use pocketmine\utils\Utils;
 use pocketmine\VersionInfo;
 use pocketmine\world\format\Chunk;
+use pocketmine\world\portal\PortalTravelHelper;
 use pocketmine\world\Position;
 use pocketmine\world\sound\Sound;
 use pocketmine\world\World;
@@ -127,6 +128,11 @@ abstract class Entity{
 	protected Vector3 $lastMotion;
 	protected bool $forceMovementUpdate = false;
 	private bool $checkBlockIntersectionsNextTick = true;
+
+	protected int $portalTicks = 0;
+	protected int $portalCooldown = 0;
+	private bool $touchingNetherPortal = false;
+	private bool $touchingEndPortal = false;
 
 	public AxisAlignedBB $boundingBox;
 	public bool $onGround = false;
@@ -661,6 +667,8 @@ abstract class Entity{
 		}
 		$this->checkBlockIntersectionsNextTick = true;
 
+		$this->processPortalTravel();
+
 		if($this->location->y <= World::Y_MIN - 16 && $this->isAlive()){
 			$ev = new EntityDamageEvent($this, EntityDamageEvent::CAUSE_VOID, 10);
 			$this->attack($ev);
@@ -681,6 +689,58 @@ abstract class Entity{
 		$this->ticksLived += $tickDiff;
 
 		return $hasUpdate;
+	}
+
+	/**
+	 * Called by portal blocks when this entity is intersecting them, once per tick.
+	 */
+	public function onNetherPortalContact() : void{
+		$this->touchingNetherPortal = true;
+	}
+
+	/**
+	 * Called by end portal blocks when this entity is intersecting them, once per tick.
+	 */
+	public function onEndPortalContact() : void{
+		$this->touchingEndPortal = true;
+	}
+
+	public function getPortalCooldown() : int{
+		return $this->portalCooldown;
+	}
+
+	public function setPortalCooldown(int $ticks) : void{
+		$this->portalCooldown = $ticks;
+	}
+
+	/**
+	 * Returns how many consecutive ticks this entity must stand inside a nether portal before being teleported.
+	 */
+	public function getRequiredNetherPortalTicks() : int{
+		return 1;
+	}
+
+	protected function processPortalTravel() : void{
+		if($this->portalCooldown > 0){
+			--$this->portalCooldown;
+		}
+
+		if($this->touchingEndPortal){
+			$this->touchingEndPortal = false;
+			if($this->portalCooldown === 0){
+				PortalTravelHelper::travelThroughEndPortal($this);
+			}
+		}
+
+		if($this->touchingNetherPortal){
+			$this->touchingNetherPortal = false;
+			if($this->portalCooldown === 0 && ++$this->portalTicks >= $this->getRequiredNetherPortalTicks()){
+				$this->portalTicks = 0;
+				PortalTravelHelper::travelThroughNetherPortal($this);
+			}
+		}else{
+			$this->portalTicks = 0;
+		}
 	}
 
 	public function isOnFire() : bool{

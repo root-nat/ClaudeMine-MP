@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
+use pocketmine\block\utils\RedstoneComponentHelper;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
@@ -89,5 +90,15 @@ class Trapdoor extends Transparent implements HorizontalFacing{
 		$world->setBlock($this->position, $this);
 		$world->addSound($this->position, new DoorSound());
 		return true;
+	}
+
+	public function onNearbyBlockChange() : void{
+		$powered = $this->isReceivingRedstonePower();
+		if($powered !== $this->open && ($powered || RedstoneComponentHelper::hasAdjacentComponent($this))){
+			$this->open = $powered;
+			$world = $this->position->getWorld();
+			$world->setBlock($this->position, $this);
+			$world->addSound($this->position, new DoorSound());
+		}
 	}
 }

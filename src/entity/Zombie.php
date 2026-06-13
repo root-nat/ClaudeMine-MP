@@ -23,21 +23,34 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
+use pocketmine\entity\ai\AbstractMob;
+use pocketmine\entity\ai\goal\MeleeAttackGoal;
+use pocketmine\entity\ai\goal\RandomStrollGoal;
+use pocketmine\entity\ai\sensor\HurtBySensor;
+use pocketmine\entity\ai\sensor\NearestPlayersSensor;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use function mt_rand;
 
-class Zombie extends Living{
+class Zombie extends AbstractMob{
 
 	public static function getNetworkTypeId() : string{ return EntityIds::ZOMBIE; }
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{
-		return new EntitySizeInfo(1.9, 0.6, 1.74);
+		return new EntitySizeInfo(1.9, 0.6); //TODO: eye height ??
 	}
 
 	public function getName() : string{
 		return "Zombie";
+	}
+
+	protected function registerBehaviour() : void{
+		$this->addSensor(new NearestPlayersSensor($this->getFollowRange()));
+		$this->addSensor(new HurtBySensor());
+
+		$this->addGoal(1, new MeleeAttackGoal());
+		$this->addGoal(7, new RandomStrollGoal());
 	}
 
 	public function getDrops() : array{
@@ -63,11 +76,8 @@ class Zombie extends Living{
 	}
 
 	public function getXpDropAmount() : int{
-		$xp = 5;
-		foreach($this->armorInventory->getContents() as $item){
-			$xp += mt_rand(1, 3);
-		}
-		return $xp;
+		//TODO: check for equipment and whether it's a baby
+		return 5;
 	}
 
 	public function getPickedItem() : ?Item{

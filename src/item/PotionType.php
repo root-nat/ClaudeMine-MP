@@ -247,10 +247,10 @@ enum PotionType{
 				new EffectInstance(VanillaEffects::RESISTANCE(), 20 * 20, 3),
 			]],
 			self::SLOW_FALLING => ["Slow Falling", fn() => [
-				new EffectInstance(VanillaEffects::SLOW_FALLING(), 90 * 20, 0)
+				//TODO
 			]],
 			self::LONG_SLOW_FALLING => ["Long Slow Falling", fn() => [
-				new EffectInstance(VanillaEffects::SLOW_FALLING(), 240 * 20, 0)
+				//TODO
 			]],
 			self::STRONG_SLOWNESS => ["Strong Slowness", fn() => [
 				new EffectInstance(VanillaEffects::SLOWNESS(), 20 * 20, 3)

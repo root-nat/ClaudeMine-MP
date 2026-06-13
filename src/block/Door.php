@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
+use pocketmine\block\utils\RedstoneComponentHelper;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
@@ -108,7 +109,31 @@ class Door extends Transparent implements HorizontalFacing{
 	public function onNearbyBlockChange() : void{
 		if(!$this->canBeSupportedAt($this) && !$this->getSide(Facing::DOWN) instanceof Door){ //Replace with common break method
 			$this->position->getWorld()->useBreakOn($this->position); //this will delete both halves if they exist
+			return;
 		}
+
+		if($this->top){
+			return;
+		}
+		$other = $this->getSide(Facing::UP);
+		$powered = $this->isReceivingRedstonePower() || ($other instanceof Door && $other->hasSameTypeId($this) && $other->isReceivingRedstonePower());
+		//Bedrock door states can't store a "powered" flag, so we only close unpowered doors when a redstone component
+		//is attached nearby, to avoid closing manually-opened doors on unrelated neighbour updates
+		if($powered !== $this->open && ($powered || RedstoneComponentHelper::hasAdjacentComponent($this) || ($other instanceof Door && RedstoneComponentHelper::hasAdjacentComponent($other)))){
+			$this->setOpenState($powered);
+		}
+	}
+
+	private function setOpenState(bool $open) : void{
+		$this->open = $open;
+		$world = $this->position->getWorld();
+		$other = $this->getSide($this->top ? Facing::DOWN : Facing::UP);
+		if($other instanceof Door && $other->hasSameTypeId($this)){
+			$other->open = $open;
+			$world->setBlock($other->position, $other);
+		}
+		$world->setBlock($this->position, $this);
+		$world->addSound($this->position, new DoorSound());
 	}
 
 	public function place(BlockTransaction $tx, Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, ?Player $player = null) : bool{

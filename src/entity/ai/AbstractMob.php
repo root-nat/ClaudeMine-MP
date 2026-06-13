@@ -1,0 +1,159 @@
+<?php
+
+/*
+ *
+ *  ____            _        _   __  __ _                  __  __ ____
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * @author PocketMine Team
+ * @link http://www.pocketmine.net/
+ *
+ *
+ */
+
+declare(strict_types=1);
+
+namespace pocketmine\entity\ai;
+
+use pocketmine\entity\ai\goal\Goal;
+use pocketmine\entity\ai\goal\GoalSelector;
+use pocketmine\entity\ai\memory\Memory;
+use pocketmine\entity\ai\nav\NodeAccess;
+use pocketmine\entity\ai\nav\WorldNodeAccess;
+use pocketmine\entity\ai\sensor\Sensor;
+use pocketmine\entity\ai\target\TargetCandidate;
+use pocketmine\entity\ai\target\TargetSelector;
+use pocketmine\entity\Attribute;
+use pocketmine\entity\Living;
+use pocketmine\event\entity\EntityDamageByEntityEvent;
+use pocketmine\event\entity\EntityDamageEvent;
+use pocketmine\nbt\tag\CompoundTag;
+use function count;
+use function mt_getrandmax;
+use function mt_rand;
+
+/**
+ * Base class for AI-driven mobs. Owns the goal selector, target selector, sensors and memory, implements
+ * {@link MobContext} against the live entity, and drives the whole AI pipeline once per tick from entityBaseTick. New
+ * mobs extend this and declare their behaviour in registerBehaviour(). The pure components it delegates to are all
+ * unit-tested; this glue only wires them to the engine.
+ */
+abstract class AbstractMob extends Living implements MobContext{
+
+	protected GoalSelector $goalSelector;
+	protected TargetSelector $targetSelector;
+	protected Memory $aiMemory;
+	private ?WorldNodeAccess $nodeAccess = null;
+
+	/** @var Sensor[] */
+	private array $sensors = [];
+	/** @var int[] */
+	private array $sensorCountdowns = [];
+
+	protected function getInitialDragMultiplier() : float{ return 0.02; }
+
+	protected function getInitialGravity() : float{ return 0.08; }
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		parent::initEntity($nbt);
+		$this->setStepHeight(1.0); //Bedrock mobs climb 1-block obstacles
+		$max = $this->getDefaultMaxHealth();
+		if($max !== $this->getMaxHealth()){
+			$this->setMaxHealth($max);
+		}
+		$this->aiMemory = new Memory();
+		$this->goalSelector = new GoalSelector();
+		$this->targetSelector = new TargetSelector();
+		$this->registerBehaviour();
+	}
+
+	/**
+	 * The maximum health this mob spawns with. Override per species (e.g. 10 for a cow).
+	 */
+	protected function getDefaultMaxHealth() : int{
+		return 20;
+	}
+
+	/**
+	 * Declares this mob's goals and sensors via addGoal()/addSensor().
+	 */
+	abstract protected function registerBehaviour() : void;
+
+	protected function addGoal(int $priority, Goal $goal) : void{
+		$this->goalSelector->add($priority, $goal);
+	}
+
+	protected function addSensor(Sensor $sensor) : void{
+		$this->sensors[] = $sensor;
+		$this->sensorCountdowns[] = 0;
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if($this->closed || !$this->isAlive()){
+			return $hasUpdate;
+		}
+
+		$this->aiMemory->tickExpiries($tickDiff);
+
+		$sensorCount = count($this->sensors);
+		for($i = 0; $i < $sensorCount; ++$i){
+			$this->sensorCountdowns[$i] -= $tickDiff;
+			if($this->sensorCountdowns[$i] <= 0){
+				$this->sensorCountdowns[$i] = $this->sensors[$i]->getScanIntervalTicks();
+				$this->sensors[$i]->sense($this, $this->aiMemory);
+			}
+		}
+
+		$this->targetSelector->selectTarget($this);
+		$this->goalSelector->tick($this);
+
+		return true;
+	}
+
+	public function getFollowRange() : float{
+		$attr = $this->getAttributeMap()->get(Attribute::FOLLOW_RANGE);
+		return $attr !== null ? $attr->getValue() : 16.0;
+	}
+
+	public function getMovementSpeed() : float{
+		$attr = $this->getAttributeMap()->get(Attribute::MOVEMENT_SPEED);
+		return $attr !== null ? $attr->getValue() : 0.25;
+	}
+
+	public function getNodeAccess() : NodeAccess{
+		if($this->nodeAccess === null){
+			$this->nodeAccess = new WorldNodeAccess($this->getWorld());
+		}
+		return $this->nodeAccess;
+	}
+
+	public function getMemory() : Memory{
+		return $this->aiMemory;
+	}
+
+	public function getRandomFloat() : float{
+		return mt_rand() / mt_getrandmax();
+	}
+
+	public function getEntityId() : int{
+		return $this->getId();
+	}
+
+	public function attackEntity(TargetCandidate $target) : void{
+		$victim = $this->getWorld()->getEntity($target->entityId);
+		if($victim instanceof Living && $victim->isAlive()){
+			$damageAttr = $this->getAttributeMap()->get(Attribute::ATTACK_DAMAGE);
+			$damage = $damageAttr !== null ? $damageAttr->getValue() : 2.0;
+			$victim->attack(new EntityDamageByEntityEvent($this, $victim, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage));
+		}
+	}
+}

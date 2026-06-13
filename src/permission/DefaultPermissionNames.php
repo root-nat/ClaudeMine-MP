@@ -40,6 +40,7 @@ final class DefaultPermissionNames{
 	public const COMMAND_ENCHANT_SELF = "pocketmine.command.enchant.self";
 	public const COMMAND_GAMEMODE_OTHER = "pocketmine.command.gamemode.other";
 	public const COMMAND_GAMEMODE_SELF = "pocketmine.command.gamemode.self";
+	public const COMMAND_GAMERULE = "pocketmine.command.gamerule";
 	public const COMMAND_GC = "pocketmine.command.gc";
 	public const COMMAND_GIVE_OTHER = "pocketmine.command.give.other";
 	public const COMMAND_GIVE_SELF = "pocketmine.command.give.self";
@@ -78,6 +79,7 @@ final class DefaultPermissionNames{
 	public const COMMAND_UNBAN_IP = "pocketmine.command.unban.ip";
 	public const COMMAND_UNBAN_PLAYER = "pocketmine.command.unban.player";
 	public const COMMAND_VERSION = "pocketmine.command.version";
+	public const COMMAND_WEATHER = "pocketmine.command.weather";
 	public const COMMAND_WHITELIST_ADD = "pocketmine.command.whitelist.add";
 	public const COMMAND_WHITELIST_DISABLE = "pocketmine.command.whitelist.disable";
 	public const COMMAND_WHITELIST_ENABLE = "pocketmine.command.whitelist.enable";

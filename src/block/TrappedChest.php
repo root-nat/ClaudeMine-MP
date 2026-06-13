@@ -23,16 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
-use pocketmine\block\tile\TrappedChest as TileTrappedChest;
-use function min;
-
 class TrappedChest extends Chest{
 
-	public function getWeakRedstonePower(int $face) : int{
-		$tile = $this->position->getWorld()->getTile($this->position);
-		if($tile instanceof TileTrappedChest){
-			return min(15, $tile->getInventory()->getViewerCount());
-		}
-		return 0;
-	}
+	//TODO: Redstone!
+
 }

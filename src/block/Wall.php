@@ -97,16 +97,13 @@ class Wall extends Transparent{
 	protected function recalculateConnections() : bool{
 		$changed = 0;
 
+		//TODO: implement tall/short connections - right now we only support short as per pre-1.16
+
 		foreach(Facing::HORIZONTAL as $facing){
 			$block = $this->getSide($facing);
 			if($block instanceof static || $block instanceof FenceGate || $block instanceof Thin || $block->getSupportType(Facing::opposite($facing)) === SupportType::FULL){
-				$aboveNeighbor = $block->getSide(Facing::UP);
-				$tall = $aboveNeighbor instanceof static ||
-					$aboveNeighbor instanceof FenceGate ||
-					$aboveNeighbor->getSupportType(Facing::DOWN) === SupportType::FULL;
-				$newType = $tall ? WallConnectionType::TALL : WallConnectionType::SHORT;
-				if(($this->connections[$facing] ?? null) !== $newType){
-					$this->connections[$facing] = $newType;
+				if(!isset($this->connections[$facing])){
+					$this->connections[$facing] = WallConnectionType::SHORT;
 					$changed++;
 				}
 			}elseif(isset($this->connections[$facing])){

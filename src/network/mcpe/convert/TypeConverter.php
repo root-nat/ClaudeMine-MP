@@ -46,7 +46,10 @@ use pocketmine\nbt\tag\Tag;
 use pocketmine\nbt\TreeRoot;
 use pocketmine\nbt\UnexpectedTagTypeException;
 use pocketmine\network\mcpe\protocol\serializer\ItemTypeDictionary;
+use pocketmine\network\mcpe\protocol\types\BoolGameRule;
 use pocketmine\network\mcpe\protocol\types\GameMode as ProtocolGameMode;
+use pocketmine\network\mcpe\protocol\types\GameRule as ProtocolGameRule;
+use pocketmine\network\mcpe\protocol\types\IntGameRule;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStack;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackExtraData;
 use pocketmine\network\mcpe\protocol\types\inventory\ItemStackExtraDataShield;
@@ -60,8 +63,11 @@ use pocketmine\utils\Filesystem;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\world\format\io\GlobalBlockStateHandlers;
 use pocketmine\world\format\io\GlobalItemDataHandlers;
+use pocketmine\world\gamerule\GameRule as CoreGameRule;
+use pocketmine\world\gamerule\GameRules;
 use function get_class;
 use function hash;
+use function is_int;
 
 class TypeConverter{
 	use SingletonTrait;
@@ -114,6 +120,22 @@ class TypeConverter{
 
 	public function setSkinAdapter(SkinAdapter $skinAdapter) : void{
 		$this->skinAdapter = $skinAdapter;
+	}
+
+	/**
+	 * @return ProtocolGameRule[]
+	 * @phpstan-return array<string, ProtocolGameRule>
+	 */
+	public function coreGameRulesToProtocol(GameRules $gameRules) : array{
+		$result = [];
+		foreach($gameRules->getAll() as $name => $value){
+			if($name === CoreGameRule::NATURAL_REGENERATION->value){
+				//client-side health regeneration must always be disabled, the server handles regeneration
+				$value = false;
+			}
+			$result[$name] = is_int($value) ? new IntGameRule($value, false) : new BoolGameRule($value, false);
+		}
+		return $result;
 	}
 
 	/**

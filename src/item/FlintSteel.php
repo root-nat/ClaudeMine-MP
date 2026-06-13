@@ -28,6 +28,7 @@ use pocketmine\block\BlockTypeIds;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\world\portal\NetherPortalShape;
 use pocketmine\world\sound\FlintSteelSound;
 
 class FlintSteel extends Tool{
@@ -35,6 +36,13 @@ class FlintSteel extends Tool{
 	public function onInteractBlock(Player $player, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, array &$returnedItems) : ItemUseResult{
 		if($blockReplace->getTypeId() === BlockTypeIds::AIR){
 			$world = $player->getWorld();
+
+			if($blockClicked->getTypeId() === BlockTypeIds::OBSIDIAN && NetherPortalShape::tryIgnite($world, $blockReplace->getPosition())){
+				$world->addSound($blockReplace->getPosition()->add(0.5, 0.5, 0.5), new FlintSteelSound());
+				$this->applyDamage(1);
+				return ItemUseResult::SUCCESS;
+			}
+
 			$world->setBlock($blockReplace->getPosition(), VanillaBlocks::FIRE());
 			$world->addSound($blockReplace->getPosition()->add(0.5, 0.5, 0.5), new FlintSteelSound());
 

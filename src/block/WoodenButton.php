@@ -25,9 +25,6 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\WoodMaterial;
 use pocketmine\block\utils\WoodTypeTrait;
-use pocketmine\entity\projectile\Arrow;
-use pocketmine\entity\projectile\Projectile;
-use pocketmine\math\RayTraceResult;
 
 class WoodenButton extends Button implements WoodMaterial{
 	use WoodTypeTrait;
@@ -36,13 +33,8 @@ class WoodenButton extends Button implements WoodMaterial{
 		return 30;
 	}
 
-	public function onProjectileHit(Projectile $projectile, RayTraceResult $hitResult) : void{
-		if($projectile instanceof Arrow && !$this->pressed){
-			$this->pressed = true;
-			$world = $this->position->getWorld();
-			$world->setBlock($this->position, $this);
-			$world->scheduleDelayedBlockUpdate($this->position, $this->getActivationTime());
-		}
+	public function hasEntityCollision() : bool{
+		return false; //TODO: arrows activate wooden buttons
 	}
 
 	public function getFuelTime() : int{

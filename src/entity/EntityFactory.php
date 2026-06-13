@@ -33,10 +33,13 @@ use pocketmine\data\bedrock\PotionTypeIds;
 use pocketmine\data\SavedDataLoadingException;
 use pocketmine\entity\EntityDataHelper as Helper;
 use pocketmine\entity\object\AreaEffectCloud;
+use pocketmine\entity\object\Boat;
 use pocketmine\entity\object\EndCrystal;
 use pocketmine\entity\object\ExperienceOrb;
 use pocketmine\entity\object\FallingBlock;
 use pocketmine\entity\object\ItemEntity;
+use pocketmine\entity\object\Minecart;
+use pocketmine\entity\object\MinecartWithTnt;
 use pocketmine\entity\object\Painting;
 use pocketmine\entity\object\PaintingMotive;
 use pocketmine\entity\object\PrimedTNT;
@@ -131,6 +134,18 @@ final class EntityFactory{
 			return new IceBomb(Helper::parseLocation($nbt, $world), null, $nbt);
 		}, ['minecraft:ice_bomb']);
 
+		$this->register(Minecart::class, function(World $world, CompoundTag $nbt) : Minecart{
+			return new Minecart(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Minecart', 'minecraft:minecart']);
+
+		$this->register(MinecartWithTnt::class, function(World $world, CompoundTag $nbt) : MinecartWithTnt{
+			return new MinecartWithTnt(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['MinecartTnt', 'TntMinecart', 'minecraft:tnt_minecart']);
+
+		$this->register(Boat::class, function(World $world, CompoundTag $nbt) : Boat{
+			return new Boat(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Boat', 'minecraft:boat']);
+
 		$this->register(ItemEntity::class, function(World $world, CompoundTag $nbt) : ItemEntity{
 			$itemTag = $nbt->getCompoundTag(ItemEntity::TAG_ITEM);
 			if($itemTag === null){
@@ -198,6 +213,38 @@ final class EntityFactory{
 		$this->register(Squid::class, function(World $world, CompoundTag $nbt) : Squid{
 			return new Squid(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['Squid', 'minecraft:squid']);
+
+		$this->register(Cow::class, function(World $world, CompoundTag $nbt) : Cow{
+			return new Cow(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Cow', 'minecraft:cow']);
+
+		$this->register(Pig::class, function(World $world, CompoundTag $nbt) : Pig{
+			return new Pig(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Pig', 'minecraft:pig']);
+
+		$this->register(Sheep::class, function(World $world, CompoundTag $nbt) : Sheep{
+			return new Sheep(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Sheep', 'minecraft:sheep']);
+
+		$this->register(Chicken::class, function(World $world, CompoundTag $nbt) : Chicken{
+			return new Chicken(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Chicken', 'minecraft:chicken']);
+
+		$this->register(Skeleton::class, function(World $world, CompoundTag $nbt) : Skeleton{
+			return new Skeleton(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Skeleton', 'minecraft:skeleton']);
+
+		$this->register(Creeper::class, function(World $world, CompoundTag $nbt) : Creeper{
+			return new Creeper(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Creeper', 'minecraft:creeper']);
+
+		$this->register(Spider::class, function(World $world, CompoundTag $nbt) : Spider{
+			return new Spider(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Spider', 'minecraft:spider']);
+
+		$this->register(Enderman::class, function(World $world, CompoundTag $nbt) : Enderman{
+			return new Enderman(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Enderman', 'minecraft:enderman']);
 
 		$this->register(Villager::class, function(World $world, CompoundTag $nbt) : Villager{
 			return new Villager(Helper::parseLocation($nbt, $world), $nbt);

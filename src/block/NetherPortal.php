@@ -28,6 +28,7 @@ use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\entity\Entity;
 use pocketmine\item\Item;
 use pocketmine\math\Axis;
+use pocketmine\math\Facing;
 
 class NetherPortal extends Transparent{
 
@@ -73,8 +74,24 @@ class NetherPortal extends Transparent{
 		return [];
 	}
 
+	public function onNearbyBlockChange() : void{
+		$world = $this->position->getWorld();
+		$sideFaces = $this->axis === Axis::X ? [Facing::WEST, Facing::EAST] : [Facing::NORTH, Facing::SOUTH];
+		$sideFaces[] = Facing::UP;
+		$sideFaces[] = Facing::DOWN;
+
+		foreach($sideFaces as $face){
+			$side = $this->getSide($face);
+			$typeId = $side->getTypeId();
+			if($typeId !== BlockTypeIds::OBSIDIAN && $typeId !== BlockTypeIds::NETHER_PORTAL){
+				$world->setBlock($this->position, VanillaBlocks::AIR());
+				return;
+			}
+		}
+	}
+
 	public function onEntityInside(Entity $entity) : bool{
-		//TODO
+		$entity->onNetherPortalContact();
 		return true;
 	}
 }

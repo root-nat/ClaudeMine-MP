@@ -69,6 +69,7 @@ abstract class Button extends Flowable implements AnyFacing{
 			$world->setBlock($this->position, $this);
 			$world->scheduleDelayedBlockUpdate($this->position, $this->getActivationTime());
 			$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOnSound());
+			$world->notifyNeighbourBlockUpdate($this->position->getSide(Facing::opposite($this->facing)));
 		}
 
 		return true;
@@ -80,6 +81,7 @@ abstract class Button extends Flowable implements AnyFacing{
 			$world = $this->position->getWorld();
 			$world->setBlock($this->position, $this);
 			$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOffSound());
+			$world->notifyNeighbourBlockUpdate($this->position->getSide(Facing::opposite($this->facing)));
 		}
 	}
 
@@ -88,7 +90,7 @@ abstract class Button extends Flowable implements AnyFacing{
 	}
 
 	public function getStrongRedstonePower(int $face) : int{
-		return ($this->pressed && $face === Facing::opposite($this->facing)) ? 15 : 0;
+		return $this->pressed && $face === Facing::opposite($this->facing) ? 15 : 0;
 	}
 
 	public function onNearbyBlockChange() : void{

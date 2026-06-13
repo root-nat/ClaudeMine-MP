@@ -25,6 +25,7 @@ namespace pocketmine\world\generator;
 
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\Utils;
+use pocketmine\world\generator\end\End;
 use pocketmine\world\generator\hell\Nether;
 use pocketmine\world\generator\normal\Normal;
 use function array_keys;
@@ -55,6 +56,8 @@ final class GeneratorManager{
 		$this->addAlias("normal", "default");
 		$this->addGenerator(Nether::class, "nether", fn() => null);
 		$this->addAlias("nether", "hell");
+		$this->addGenerator(End::class, "end", fn() => null);
+		$this->addAlias("end", "the_end");
 	}
 
 	/**
