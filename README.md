@@ -1,84 +1,213 @@
-<p align="center">
-	<a href="https://pmmp.io">
-		<!--[if IE]>
-			<img src="https://github.com/pmmp/PocketMine-MP/blob/stable/.github/readme/pocketmine.png" alt="The PocketMine-MP logo" title="PocketMine" loading="eager" />
-		<![endif]-->
-		<picture>
-			<source srcset="https://raw.githubusercontent.com/pmmp/PocketMine-MP/stable/.github/readme/pocketmine-dark-rgb.gif" media="(prefers-color-scheme: dark)">
-			<img src="https://raw.githubusercontent.com/pmmp/PocketMine-MP/stable/.github/readme/pocketmine-rgb.gif" loading="eager" />
-		</picture>
-	</a><br>
-	<b>A highly customisable, open source server software for Minecraft: Bedrock Edition written in PHP</b>
-</p>
+<div align="center">
 
-<p align="center">
-	<a href="https://github.com/pmmp/PocketMine-MP/actions/workflows/main.yml"><img src="https://github.com/pmmp/PocketMine-MP/actions/workflows/main.yml/badge.svg" alt="CI" /></a>
-	<a href="https://github.com/pmmp/PocketMine-MP/releases/latest"><img alt="GitHub release (latest SemVer)" src="https://img.shields.io/github/v/release/pmmp/PocketMine-MP?label=release&sort=semver"></a>
-	<a href="https://discord.gg/bmSAZBG"><img src="https://img.shields.io/discord/373199722573201408?label=discord&color=7289DA&logo=discord" alt="Discord" /></a>
-	<br>
-	<a href="https://github.com/pmmp/PocketMine-MP/releases"><img alt="GitHub all releases" src="https://img.shields.io/github/downloads/pmmp/PocketMine-MP/total?label=downloads%40total"></a>
-	<a href="https://github.com/pmmp/PocketMine-MP/releases/latest"><img alt="GitHub release (latest by SemVer)" src="https://img.shields.io/github/downloads/pmmp/PocketMine-MP/latest/total?sort=semver"></a>
-</p>
+# ⛏️ ClaudeMine
 
-## What is this?
-PocketMine-MP is a highly customisable server software for Minecraft: Bedrock Edition, built from scratch in PHP, with over 10 years of history.
+### Reproducing Minecraft Bedrock Edition in PHP
 
-If you're looking to create a Minecraft: Bedrock server with **custom functionality**, look no further.
+*A PocketMine-MP fork focused on vanilla Bedrock accuracy rather than custom gameplay.*
 
-- 🧩 **Powerful plugin API** - extend and customise gameplay as you see fit
-- 🗺️ **Rich ecosystem** and **large developer community** - find plugins easily and learn to develop your own
-- 🌐 **Multi-world support** - offer a more varied game experience to players without transferring them to other server nodes
-- 🏎️ **Performance** - get 100+ players onto one server (depending on hardware and plugins)
-- ⤴️ **Continuously updated** - new Minecraft versions are usually supported within days
+![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge\&logo=php)
+![PocketMine](https://img.shields.io/badge/Based%20on-PocketMine--MP-FFB300?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Experimental-red?style=for-the-badge)
+![License](https://img.shields.io/badge/License-LGPL--3.0-green?style=for-the-badge)
 
-## :x: PocketMine-MP is NOT a vanilla Minecraft server software.
-**It is poorly suited to hosting vanilla survival servers.**
-It doesn't have many features from the vanilla game, such as vanilla world generation, redstone, mob AI, and various other things.
+</div>
 
-If you just want to play **vanilla survival multiplayer**, consider using the [official Minecraft: Bedrock server software](https://minecraft.net/download/server/bedrock) instead of PocketMine-MP.
+---
 
-If that's not an option for you, you may be able to add some of PocketMine-MP's missing features using plugins from [Poggit](https://poggit.pmmp.io/plugins), or write plugins to implement them yourself.
+## 🎯 Project Vision
 
-## Getting Started
-- [Documentation](http://pmmp.readthedocs.org/)
-- [Installation instructions](https://pmmp.readthedocs.io/en/rtfd/installation.html)
-- [Docker image](https://github.com/pmmp/PocketMine-MP/pkgs/container/pocketmine-mp)
-- [Plugin repository](https://poggit.pmmp.io/plugins)
+ClaudeMine is an experimental fork of PocketMine-MP with a single goal:
 
-## Community & Support
-Join our [Discord](https://discord.gg/bmSAZBG) server to chat with other users and developers.
+> Reproduce Minecraft: Bedrock Edition as accurately as possible using PHP.
 
-You can also post questions on [StackOverflow](https://stackoverflow.com/tags/pocketmine) under the tag `pocketmine`.
+While PocketMine-MP focuses on custom servers and plugin development, ClaudeMine focuses on implementing missing vanilla mechanics and matching Bedrock Edition behavior.
 
-## Developing Plugins
-If you want to write your own plugins, the following resources may be useful.
-Don't forget you can always ask our community if you need help.
+---
 
- * [Developer documentation](https://devdoc.pmmp.io) - General documentation for PocketMine-MP plugin developers
- * [Latest release API documentation](https://apidoc.pmmp.io) - Doxygen API documentation generated for each release
- * [Latest bleeding-edge API documentation](https://apidoc-dev.pmmp.io) - Doxygen API documentation generated weekly from `major-next` branch
- * [DevTools](https://github.com/pmmp/DevTools/) - Development tools plugin for creating plugins
- * [ExamplePlugin](https://github.com/pmmp/ExamplePlugin/) - Example plugin demonstrating some basic API features
+## 🚧 Development Status
 
-## Contributing to PocketMine-MP
-PocketMine-MP accepts community contributions! The following resources will be useful if you want to contribute to PocketMine-MP.
- * [Building and running PocketMine-MP from source](BUILDING.md)
- * [Contributing Guidelines](CONTRIBUTING.md)
+> [!WARNING]
+> ClaudeMine is currently under heavy development.
+>
+> Estimated development duration: **2–6 months**
+>
+> Many vanilla systems are still incomplete or under active testing.
 
-New here? Check out [issues with the "Easy task" label](https://github.com/pmmp/PocketMine-MP/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22Easy%20task%22) for things you could work to familiarise yourself with the codebase.
+The project is heavily assisted by Claude AI for code analysis, architecture research and implementation of vanilla mechanics.
 
-## Donate
-PocketMine-MP is free, but it requires a lot of time and effort from unpaid volunteers to develop. Donations enable us to keep delivering support for new versions and adding features your players love.
+---
 
-You can support development using the following methods:
+## ✨ Planned Features
 
-- [Patreon](https://www.patreon.com/pocketminemp)
-- Bitcoin (BTC): `bc1q2v5ngyf8ugyd55kqa9ep35g2rv342ueqm6ks33`
-- Stellar Lumens (XLM): `GAAC5WZ33HCTE3BFJFZJXONMEIBNHFLBXM2HJVAZHXXPYA3HP5XPPS7T`
+<table>
+<tr>
+<td width="50%">
 
-Thanks for your support!
+### 🌍 World Systems
 
-## Licensing information
-This project is licensed under LGPL-3.0. Please see the [LICENSE](/LICENSE) file for details.
+* Vanilla terrain generation
+* Structures
+* Biomes
+* Weather system
+* Day/Night cycle
+* Multi-dimension support
 
-pmmp/PocketMine are not affiliated with Mojang. All brands and trademarks belong to their respective owners. PocketMine-MP is not a Mojang-approved software, nor is it associated with Mojang.
+</td>
+<td width="50%">
+
+### ⚙️ Gameplay Systems
+
+* Complete Redstone
+* Minecarts
+* Boats
+* Villages
+* Raids
+* Bosses
+
+</td>
+</tr>
+</table>
+
+<table>
+<tr>
+<td width="50%">
+
+### 👾 Entities
+
+* Vanilla mobs
+* Mob AI
+* Pathfinding
+* Trading
+* Breeding
+* Combat behavior
+
+</td>
+<td width="50%">
+
+### 🔬 Accuracy
+
+* Tick behavior
+* Entity movement
+* Block mechanics
+* Physics
+* Game rules
+* Network behavior
+
+</td>
+</tr>
+</table>
+
+---
+
+## 📌 Priorities
+
+Current development priorities include:
+
+* Chunk loading and unloading
+* World transfer synchronization
+* Vanilla world generation
+* Redstone implementation
+* Mob AI
+* Vehicles (boats & minecarts)
+* Villages and raids
+* Weather systems
+* Boss mechanics
+
+---
+
+## 🧪 We Need Testers
+
+> [!IMPORTANT]
+> The largest challenge is no longer implementation.
+>
+> It is validation.
+
+As new systems are added, we need players capable of comparing ClaudeMine against the official Minecraft Bedrock Edition.
+
+We are looking for:
+
+* Vanilla Bedrock players
+* Technical testers
+* Bug reporters
+* Developers familiar with Bedrock behavior
+
+The goal is to prevent features from drifting away from true vanilla behavior.
+
+---
+
+## ❌ What ClaudeMine Is NOT
+
+ClaudeMine is **not designed for large public multiplayer servers**.
+
+Unlike PocketMine-MP, the primary goal is not:
+
+* Maximum performance
+* Hundreds of concurrent players
+* Custom gamemodes
+* Extensive plugin ecosystems
+
+The primary objective is:
+
+> Bedrock Edition gameplay accuracy.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome.
+
+Useful contributions include:
+
+* Bug reports
+* Vanilla comparison reports
+* Gameplay recordings
+* Performance testing
+* Code contributions
+
+If you discover a behavior difference between ClaudeMine and Minecraft Bedrock Edition, please open an issue.
+
+---
+
+## 📊 Project Philosophy
+
+<table>
+<tr>
+<th>PocketMine-MP</th>
+<th>ClaudeMine</th>
+</tr>
+<tr>
+<td>Custom servers</td>
+<td>Vanilla accuracy</td>
+</tr>
+<tr>
+<td>Plugin ecosystem</td>
+<td>Game mechanics</td>
+</tr>
+<tr>
+<td>Performance-first</td>
+<td>Behavior-first</td>
+</tr>
+<tr>
+<td>Large player counts</td>
+<td>Feature completeness</td>
+</tr>
+</table>
+
+---
+
+## 📜 License
+
+ClaudeMine is licensed under **LGPL-3.0** and is based on PocketMine-MP.
+
+Minecraft, Bedrock Edition, Mojang and Microsoft are trademarks of their respective owners.
+
+ClaudeMine is not affiliated with Mojang Studios or Microsoft.
+
+---
+
+<div align="center">
+
+**Built with ❤️, PHP and Claude**
+
+</div>
