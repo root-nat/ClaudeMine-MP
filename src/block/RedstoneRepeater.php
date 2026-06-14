@@ -27,6 +27,7 @@ use pocketmine\block\utils\HorizontalFacing;
 use pocketmine\block\utils\HorizontalFacingTrait;
 use pocketmine\block\utils\PoweredByRedstone;
 use pocketmine\block\utils\PoweredByRedstoneTrait;
+use pocketmine\block\utils\RedstoneRepeaterLockingResolver;
 use pocketmine\block\utils\StaticSupportTrait;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
@@ -97,6 +98,9 @@ class RedstoneRepeater extends Flowable implements PoweredByRedstone, Horizontal
 	}
 
 	public function onScheduledUpdate() : void{
+		if($this->isLocked()){
+			return; //a locked repeater holds its current output
+		}
 		$shouldBePowered = $this->hasInputPower();
 		if($shouldBePowered !== $this->powered){
 			$this->powered = $shouldBePowered;
@@ -104,6 +108,23 @@ class RedstoneRepeater extends Flowable implements PoweredByRedstone, Horizontal
 			$world->setBlock($this->position, $this);
 			$world->notifyNeighbourBlockUpdate($this->position->getSide(Facing::opposite($this->facing)));
 		}
+	}
+
+	/**
+	 * A repeater is locked while a powered repeater or comparator on either perpendicular side points its output into it;
+	 * while locked it ignores input changes and freezes its current output (vanilla).
+	 */
+	public function isLocked() : bool{
+		foreach(RedstoneRepeaterLockingResolver::perpendicularSides($this->facing) as $side){
+			$neighbour = $this->getSide($side);
+			if(
+				($neighbour instanceof RedstoneRepeater || $neighbour instanceof RedstoneComparator) &&
+				RedstoneRepeaterLockingResolver::neighbourLocks($side, $neighbour->isPowered(), $neighbour->getFacing())
+			){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public function getWeakRedstonePower(int $face) : int{
@@ -121,6 +142,9 @@ class RedstoneRepeater extends Flowable implements PoweredByRedstone, Horizontal
 	}
 
 	private function updatePowerState() : void{
+		if($this->isLocked()){
+			return; //frozen while locked; it re-evaluates once the lock is released (via onNearbyBlockChange)
+		}
 		if($this->hasInputPower() !== $this->powered){
 			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, $this->delay * 2);
 		}

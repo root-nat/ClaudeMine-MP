@@ -48,4 +48,10 @@ enum MemoryModuleType : string{
 	case BREED_TARGET = "breed_target";
 	//value type: TargetCandidate - the nearest adult of the same species a baby should follow
 	case PARENT = "parent";
+	//value type: TargetCandidate - the owner a tamed mob (e.g. a wolf) should follow
+	case OWNER = "owner";
+	//value type: TargetCandidate - the enemy a wolf has chosen to fight (retaliation or defending its owner)
+	case COMBAT_TARGET = "combat_target";
+	//value type: TargetCandidate - a nearby entity this mob is afraid of and should flee from (e.g. a creeper from a cat)
+	case AVOID_TARGET = "avoid_target";
 }

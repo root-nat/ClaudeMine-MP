@@ -31,6 +31,7 @@ use pocketmine\entity\ai\nav\WorldNodeAccess;
 use pocketmine\entity\ai\sensor\Sensor;
 use pocketmine\entity\ai\target\TargetCandidate;
 use pocketmine\entity\ai\target\TargetSelector;
+use pocketmine\entity\animation\ArmSwingAnimation;
 use pocketmine\entity\Attribute;
 use pocketmine\entity\Living;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
@@ -64,11 +65,18 @@ abstract class AbstractMob extends Living implements MobContext{
 	protected function getInitialGravity() : float{ return 0.08; }
 
 	protected function initEntity(CompoundTag $nbt) : void{
+		//Living::initEntity sets current health from getMaxHealth() (the default 20) before we raise the real max below.
+		//Detect a fresh spawn (no saved health) so a mob whose default max differs from 20 can start at its true full HP
+		//instead of being stuck at 20; loaded mobs keep their saved (possibly wounded) health.
+		$freshSpawn = $nbt->getTag("Health") === null && $nbt->getTag("HealF") === null;
 		parent::initEntity($nbt);
 		$this->setStepHeight(1.0); //Bedrock mobs climb 1-block obstacles
 		$max = $this->getDefaultMaxHealth();
 		if($max !== $this->getMaxHealth()){
 			$this->setMaxHealth($max);
+			if($freshSpawn){
+				$this->setHealth($max);
+			}
 		}
 		$this->aiMemory = new Memory();
 		$this->goalSelector = new GoalSelector();
@@ -168,6 +176,7 @@ abstract class AbstractMob extends Living implements MobContext{
 	public function attackEntity(TargetCandidate $target) : void{
 		$victim = $this->getWorld()->getEntity($target->entityId);
 		if($victim instanceof Living && $victim->isAlive()){
+			$this->broadcastAnimation(new ArmSwingAnimation($this)); //play the mob's melee swing on the client
 			$damageAttr = $this->getAttributeMap()->get(Attribute::ATTACK_DAMAGE);
 			$damage = $damageAttr !== null ? $damageAttr->getValue() : 2.0;
 			$victim->attack(new EntityDamageByEntityEvent($this, $victim, EntityDamageEvent::CAUSE_ENTITY_ATTACK, $damage));

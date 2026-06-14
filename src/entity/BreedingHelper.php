@@ -37,6 +37,9 @@ final class BreedingHelper{
 	public const SHEEP = "sheep";
 	public const PIG = "pig";
 	public const CHICKEN = "chicken";
+	public const OCELOT = "ocelot";
+	public const RABBIT = "rabbit";
+	public const FOX = "fox";
 
 	/** How long an animal stays ready to breed after being fed (30s). */
 	public const IN_LOVE_TICKS = 600;
@@ -59,6 +62,9 @@ final class BreedingHelper{
 			self::COW, self::SHEEP => [ItemTypeIds::WHEAT],
 			self::PIG => [ItemTypeIds::CARROT, ItemTypeIds::POTATO, ItemTypeIds::BEETROOT],
 			self::CHICKEN => [ItemTypeIds::WHEAT_SEEDS, ItemTypeIds::BEETROOT_SEEDS, ItemTypeIds::MELON_SEEDS, ItemTypeIds::PUMPKIN_SEEDS],
+			self::OCELOT => [ItemTypeIds::RAW_FISH, ItemTypeIds::RAW_SALMON],
+			self::RABBIT => [ItemTypeIds::CARROT, ItemTypeIds::GOLDEN_CARROT],
+			self::FOX => [ItemTypeIds::SWEET_BERRIES],
 			default => []
 		};
 	}

@@ -717,6 +717,25 @@ abstract class Living extends Entity{
 			$this->attackTime -= $tickDiff;
 		}
 
+		if(!($this instanceof Player)){
+			//a player's own attributes are flushed by its NetworkSession; other mobs have no such path, so changes
+			//(notably HEALTH, which the client uses to render things like a wolf's tail height) would never reach
+			//viewers after the spawn packet. Push any dirty syncable attributes to viewers ourselves.
+			$dirtyAttributes = $this->attributeMap->needSend();
+			if(count($dirtyAttributes) > 0){
+				$viewers = $this->getViewers();
+				if(count($viewers) > 0){
+					NetworkBroadcastUtils::broadcastEntityEvent(
+						$viewers,
+						fn(EntityEventBroadcaster $broadcaster, array $recipients) => $broadcaster->syncAttributes($recipients, $this, $dirtyAttributes)
+					);
+				}
+				foreach($dirtyAttributes as $attribute){
+					$attribute->markSynchronized();
+				}
+			}
+		}
+
 		Timings::$livingEntityBaseTick->stopTiming();
 
 		return $hasUpdate;

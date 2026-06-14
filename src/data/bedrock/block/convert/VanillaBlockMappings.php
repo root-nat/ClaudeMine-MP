@@ -73,6 +73,7 @@ use pocketmine\block\NetherPortal;
 use pocketmine\block\Observer;
 use pocketmine\block\Piston;
 use pocketmine\block\PistonArmCollision;
+use pocketmine\block\SculkSensor;
 use pocketmine\block\NetherVines;
 use pocketmine\block\NetherWartPlant;
 use pocketmine\block\PinkPetals;
@@ -1487,6 +1488,11 @@ final class VanillaBlockMappings{
 		]));
 		//transient block placed where a real block is sliding under a piston; all data lives in its MovingBlock tile
 		$reg->mapSimple(Blocks::MOVING_BLOCK(), Ids::MOVING_BLOCK);
+		$reg->mapSimple(Blocks::HONEY_BLOCK(), Ids::HONEY_BLOCK);
+		$reg->mapModel(Model::create(Blocks::SCULK_SENSOR(), Ids::SCULK_SENSOR)->properties([
+			new IntProperty(StateNames::SCULK_SENSOR_PHASE, 0, 2, fn(SculkSensor $b) => $b->getPhase(), fn(SculkSensor $b, int $v) => $b->setPhase($v)),
+			new BoolProperty(StateNames::POWERED_BIT, fn(SculkSensor $b) => $b->isPowered(), fn(SculkSensor $b, bool $v) => $b->setPowered($v))
+		]));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BASALT(), Ids::POLISHED_BASALT)->properties([$commonProperties->pillarAxis]));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BLACKSTONE_BUTTON(), Ids::POLISHED_BLACKSTONE_BUTTON)->properties($commonProperties->buttonProperties));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BLACKSTONE_PRESSURE_PLATE(), Ids::POLISHED_BLACKSTONE_PRESSURE_PLATE)->properties($commonProperties->simplePressurePlateProperties));

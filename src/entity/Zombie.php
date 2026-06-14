@@ -31,6 +31,11 @@ use function mt_rand;
 
 class Zombie extends Monster{
 
+	/** How long a zombie must stay underwater before it drowns into its water form (30s). */
+	private const WATER_CONVERSION_TICKS = 600;
+
+	private int $waterConversionTicks = 0;
+
 	public static function getNetworkTypeId() : string{ return EntityIds::ZOMBIE; }
 
 	protected function getInitialSizeInfo() : EntitySizeInfo{
@@ -47,6 +52,52 @@ class Zombie extends Monster{
 
 	protected function burnsInDaylight() : bool{
 		return true; //zombies catch fire in the morning sun
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		//bail once already converting/despawning so we can never spawn a second form before removal takes effect
+		if($this->closed || !$this->isAlive() || $this->isFlaggedForDespawn()){
+			return $hasUpdate;
+		}
+
+		if($this->convertsInWater() && $this->isUnderwater()){
+			$this->waterConversionTicks += $tickDiff;
+			if($this->waterConversionTicks >= self::WATER_CONVERSION_TICKS){
+				$this->convertInWater();
+			}
+			$hasUpdate = true;
+		}else{
+			$this->waterConversionTicks = 0;
+		}
+
+		return $hasUpdate;
+	}
+
+	/**
+	 * Whether this zombie type drowns into another form when left underwater (a zombie into a drowned, a husk back into
+	 * a zombie). The drowned itself does not.
+	 */
+	protected function convertsInWater() : bool{
+		return true;
+	}
+
+	/**
+	 * The form this zombie becomes after drowning. Only called when {@link self::convertsInWater()} is true.
+	 */
+	protected function createWaterConversion(Location $location) : Zombie{
+		return new Drowned($location);
+	}
+
+	private function convertInWater() : void{
+		$converted = $this->createWaterConversion(Location::fromObject($this->location, $this->getWorld()));
+		$converted->setMaxHealth($this->getMaxHealth());
+		$converted->setHealth($this->getHealth());
+		if($this->getNameTag() !== ""){
+			$converted->setNameTag($this->getNameTag()); //a named zombie keeps its name through the conversion
+		}
+		$converted->spawnToAll();
+		$this->flagForDespawn();
 	}
 
 	public function getDrops() : array{

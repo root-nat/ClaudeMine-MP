@@ -117,7 +117,7 @@ abstract class Animal extends AbstractMob implements Ageable{
 		$this->registerExtraGoals();
 	}
 
-	private function spawnParticleCloud(Particle $particle) : void{
+	protected function spawnParticleCloud(Particle $particle) : void{
 		$world = $this->getWorld();
 		$width = $this->size->getWidth();
 		$height = $this->size->getHeight();
@@ -155,7 +155,7 @@ abstract class Animal extends AbstractMob implements Ageable{
 		return parent::onInteract($player, $clickPos);
 	}
 
-	private function consumeFeedItem(Player $player, Item $item) : void{
+	protected function consumeFeedItem(Player $player, Item $item) : void{
 		if($player->hasFiniteResources()){
 			$item->pop();
 			$player->getInventory()->setItemInHand($item);

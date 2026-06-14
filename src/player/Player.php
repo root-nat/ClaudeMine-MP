@@ -104,6 +104,7 @@ use pocketmine\item\enchantment\MeleeWeaponEnchantment;
 use pocketmine\item\Item;
 use pocketmine\item\ItemUseResult;
 use pocketmine\item\Releasable;
+use pocketmine\item\Shield;
 use pocketmine\lang\KnownTranslationFactory;
 use pocketmine\lang\Language;
 use pocketmine\lang\Translatable;
@@ -152,6 +153,7 @@ use function array_shift;
 use function assert;
 use function count;
 use function explode;
+use function ceil;
 use function floor;
 use function get_class;
 use function max;
@@ -2667,7 +2669,55 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 			$source->cancel();
 		}
 
+		$this->tryBlockWithShield($source);
+
 		parent::attack($source);
+	}
+
+	/**
+	 * Bedrock shield blocking: while sneaking with a shield in either hand, a melee hit or projectile arriving from the
+	 * front is fully negated and chips the shield's durability instead of hurting the player.
+	 */
+	private function tryBlockWithShield(EntityDamageEvent $source) : void{
+		if($source->isCancelled() || !$this->isSneaking()){
+			return;
+		}
+		$cause = $source->getCause();
+		if($cause !== EntityDamageEvent::CAUSE_ENTITY_ATTACK && $cause !== EntityDamageEvent::CAUSE_PROJECTILE){
+			return;
+		}
+		if(!$this->isHoldingShield()){
+			return;
+		}
+		if($source instanceof EntityDamageByEntityEvent){
+			$attacker = $source->getDamager();
+			if($attacker !== null && !ShieldBlockingResolver::blocksAttackFrom(
+				$this->location->yaw, $this->location->x, $this->location->z,
+				$attacker->getPosition()->x, $attacker->getPosition()->z
+			)){
+				return; //the hit came from the side or behind - the shield doesn't cover it
+			}
+		}
+		$source->setModifier(-$source->getBaseDamage(), EntityDamageEvent::MODIFIER_BLOCKING);
+		$this->damageShield((int) max(1, (int) ceil($source->getBaseDamage())));
+	}
+
+	private function isHoldingShield() : bool{
+		return $this->inventory->getItemInHand() instanceof Shield || $this->offHandInventory->getItem(0) instanceof Shield;
+	}
+
+	private function damageShield(int $amount) : void{
+		$main = $this->inventory->getItemInHand();
+		if($main instanceof Shield){
+			$main->applyDamage($amount);
+			$this->inventory->setItemInHand($main);
+			return;
+		}
+		$off = $this->offHandInventory->getItem(0);
+		if($off instanceof Shield){
+			$off->applyDamage($amount);
+			$this->offHandInventory->setItem(0, $off);
+		}
 	}
 
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{

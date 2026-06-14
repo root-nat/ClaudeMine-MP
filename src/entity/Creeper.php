@@ -24,8 +24,10 @@ declare(strict_types=1);
 namespace pocketmine\entity;
 
 use pocketmine\entity\ai\CreeperSwellLogic;
+use pocketmine\entity\ai\goal\AvoidEntityGoal;
 use pocketmine\entity\ai\goal\MeleeAttackGoal;
 use pocketmine\entity\ai\memory\MemoryModuleType;
+use pocketmine\entity\ai\sensor\AvoidEntitySensor;
 use pocketmine\entity\ai\target\TargetCandidate;
 use pocketmine\event\entity\EntityPreExplodeEvent;
 use pocketmine\item\Item;
@@ -41,6 +43,8 @@ use function sqrt;
 class Creeper extends Monster implements Explosive{
 
 	private const TAG_FUSE = "Fuse"; //TAG_Short
+	/** Creepers flee any cat within this many blocks. */
+	private const CAT_AVOID_RANGE = 6.0;
 
 	private int $fuse = 0;
 
@@ -55,8 +59,18 @@ class Creeper extends Monster implements Explosive{
 	}
 
 	protected function registerAttackGoals() : void{
-		//the creeper still walks up to its target; the swell/detonation is handled in entityBaseTick
+		//creepers are terrified of cats: flee a nearby one (and don't swell, see entityBaseTick) instead of attacking.
+		//Scan every tick (like HurtBySensor) so a cat is noticed before an already-swelling fuse can reach detonation.
+		$this->addSensor(new AvoidEntitySensor(Cat::class, self::CAT_AVOID_RANGE, 1));
+		$this->addGoal(1, new AvoidEntityGoal());
+		//the creeper just walks up to its target (MeleeAttackGoal handles the approach); it never bites - see attackEntity
+		//and the swell/detonation in entityBaseTick
 		$this->addGoal(2, new MeleeAttackGoal());
+	}
+
+	public function attackEntity(TargetCandidate $target) : void{
+		//creepers don't deal melee damage in vanilla - they only swell up and explode (entityBaseTick handles that),
+		//so the approach goal's "hit" must do nothing (no bite, no arm swing)
 	}
 
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
@@ -65,9 +79,11 @@ class Creeper extends Monster implements Explosive{
 			return $hasUpdate;
 		}
 
+		//a creeper fleeing a cat backs off without swelling, so freeze the fuse while it has something to avoid
+		$avoiding = $this->getMemory()->get(MemoryModuleType::AVOID_TARGET) instanceof TargetCandidate;
 		$target = $this->getMemory()->get(MemoryModuleType::ATTACK_TARGET);
 		$distance = null;
-		if($target instanceof TargetCandidate && $target->alive){
+		if(!$avoiding && $target instanceof TargetCandidate && $target->alive){
 			$pos = $this->location;
 			$distance = sqrt($target->distanceSquaredTo($pos->x, $pos->y, $pos->z));
 		}

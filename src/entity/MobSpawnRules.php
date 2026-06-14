@@ -38,14 +38,14 @@ final class MobSpawnRules{
 	public const PASSIVE_MIN_LIGHT = 7;
 
 	/** Maximum nearby hostiles before a new hostile spawn is skipped. Kept low so nights don't flood with monsters. */
-	public const HOSTILE_CAP = 6;
+	public const HOSTILE_CAP = 3;
 	/** Maximum nearby passive animals before a new passive spawn is skipped. */
-	public const PASSIVE_CAP = 8;
+	public const PASSIVE_CAP = 4;
 	/** Radius (blocks) used when counting nearby mobs against the cap. */
 	public const CAP_RADIUS = 24;
 
-	public const MAX_HOSTILE_PACK = 3;
-	public const MAX_PASSIVE_PACK = 4;
+	public const MAX_HOSTILE_PACK = 2;
+	public const MAX_PASSIVE_PACK = 2;
 
 	/**
 	 * Hostiles are throttled harder than animals: only 1 in this many resolved-hostile attempts is allowed through, so

@@ -396,6 +396,7 @@ final class ItemSerializerDeserializerRegistrar{
 		$this->map1to1Item(Ids::SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE, Items::SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE());
 		$this->map1to1Item(Ids::SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE, Items::SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE());
 		$this->map1to1Item(Ids::SHEARS, Items::SHEARS());
+		$this->map1to1Item(Ids::SHIELD, Items::SHIELD());
 		$this->map1to1Item(Ids::SHULKER_SHELL, Items::SHULKER_SHELL());
 		$this->map1to1Item(Ids::SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE, Items::SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE());
 		$this->map1to1Item(Ids::SLIME_BALL, Items::SLIMEBALL());
@@ -418,6 +419,19 @@ final class ItemSerializerDeserializerRegistrar{
 		$this->map1to1Item(Ids::ENDERMAN_SPAWN_EGG, Items::ENDERMAN_SPAWN_EGG());
 		$this->map1to1Item(Ids::SLIME_SPAWN_EGG, Items::SLIME_SPAWN_EGG());
 		$this->map1to1Item(Ids::MAGMA_CUBE_SPAWN_EGG, Items::MAGMA_CUBE_SPAWN_EGG());
+		$this->map1to1Item(Ids::HUSK_SPAWN_EGG, Items::HUSK_SPAWN_EGG());
+		$this->map1to1Item(Ids::STRAY_SPAWN_EGG, Items::STRAY_SPAWN_EGG());
+		$this->map1to1Item(Ids::WITHER_SKELETON_SPAWN_EGG, Items::WITHER_SKELETON_SPAWN_EGG());
+		$this->map1to1Item(Ids::MOOSHROOM_SPAWN_EGG, Items::MOOSHROOM_SPAWN_EGG());
+		$this->map1to1Item(Ids::CAVE_SPIDER_SPAWN_EGG, Items::CAVE_SPIDER_SPAWN_EGG());
+		$this->map1to1Item(Ids::WOLF_SPAWN_EGG, Items::WOLF_SPAWN_EGG());
+		$this->map1to1Item(Ids::CAT_SPAWN_EGG, Items::CAT_SPAWN_EGG());
+		$this->map1to1Item(Ids::OCELOT_SPAWN_EGG, Items::OCELOT_SPAWN_EGG());
+		$this->map1to1Item(Ids::RABBIT_SPAWN_EGG, Items::RABBIT_SPAWN_EGG());
+		$this->map1to1Item(Ids::FOX_SPAWN_EGG, Items::FOX_SPAWN_EGG());
+		$this->map1to1Item(Ids::DROWNED_SPAWN_EGG, Items::DROWNED_SPAWN_EGG());
+		$this->map1to1Item(Ids::BLAZE_SPAWN_EGG, Items::BLAZE_SPAWN_EGG());
+		$this->map1to1Item(Ids::GHAST_SPAWN_EGG, Items::GHAST_SPAWN_EGG());
 		$this->map1to1Item(Ids::STICK, Items::STICK());
 		$this->map1to1Item(Ids::STONE_AXE, Items::STONE_AXE());
 		$this->map1to1Item(Ids::STONE_HOE, Items::STONE_HOE());

@@ -25,7 +25,16 @@ namespace pocketmine\block;
 
 use pocketmine\block\utils\FacesOppositePlacingPlayerTrait;
 use pocketmine\block\utils\HorizontalFacing;
+use pocketmine\entity\IronGolem;
+use pocketmine\entity\SnowGolem;
 
 class CarvedPumpkin extends Opaque implements HorizontalFacing{
 	use FacesOppositePlacingPlayerTrait;
+
+	public function onPostPlace() : void{
+		//capping a frame of iron blocks (or two snow blocks) with a (carved or lit) pumpkin builds the matching golem
+		if(!IronGolem::tryBuild($this->position)){
+			SnowGolem::tryBuild($this->position);
+		}
+	}
 }

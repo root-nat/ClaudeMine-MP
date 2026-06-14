@@ -1458,7 +1458,7 @@ class World implements ChunkManager{
 		}
 
 		//natural mob spawning: attempted at a low rate per ticking chunk (already near players), bounded by population caps
-		if($this->gameRules->getBool(GameRule::DO_MOB_SPAWNING) && mt_rand(0, 599) === 0){
+		if($this->gameRules->getBool(GameRule::DO_MOB_SPAWNING) && mt_rand(0, 1499) === 0){
 			NaturalSpawner::attempt($this, $chunkX, $chunkZ);
 		}
 

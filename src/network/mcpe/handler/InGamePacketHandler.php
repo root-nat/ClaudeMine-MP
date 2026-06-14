@@ -29,6 +29,8 @@ use pocketmine\block\tile\Sign;
 use pocketmine\block\utils\SignText;
 use pocketmine\entity\Attribute;
 use pocketmine\entity\InvalidSkinException;
+use pocketmine\entity\object\Boat;
+use pocketmine\entity\Rideable;
 use pocketmine\event\player\PlayerEditBookEvent;
 use pocketmine\inventory\transaction\action\DropItemAction;
 use pocketmine\inventory\transaction\InventoryTransaction;
@@ -239,12 +241,20 @@ class InGamePacketHandler extends PacketHandler{
 			if($inputFlags->get(PlayerAuthInputFlags::START_JUMPING)){
 				$this->player->jump();
 			}
+			if($inputFlags->get(PlayerAuthInputFlags::START_SNEAKING)){
+				//sneaking is how you climb out of a boat/vehicle
+				Rideable::dismountFrom($this->player);
+			}
 			if($inputFlags->get(PlayerAuthInputFlags::MISSED_SWING)){
 				$this->player->missSwing();
 			}
 		}
 
-		if(!$this->forceMoveSync && $hasMoved){
+		$vehicleInfo = $packet->getVehicleInfo();
+		if($vehicleInfo !== null && ($vehicle = $this->player->getWorld()->getEntity($vehicleInfo->getPredictedVehicleActorUniqueId())) instanceof Boat && $vehicle->handleVehicleInput($this->player, $packet)){
+			//the player is steering a boat: feed the input to the boat instead of moving the player directly
+			$this->lastPlayerAuthInputPosition = $rawPos;
+		}elseif(!$this->forceMoveSync && $hasMoved){
 			$this->lastPlayerAuthInputPosition = $rawPos;
 			//TODO: this packet has WAYYYYY more useful information that we're not using
 			$this->player->handleMovement($newPos);

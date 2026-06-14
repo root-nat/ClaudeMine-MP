@@ -129,8 +129,8 @@ final class NaturalSpawner{
 		$location = Location::fromObject($pos, $world);
 		if($hostile){
 			return match(mt_rand(0, 3)){
-				0 => new Zombie($location),
-				1 => new Skeleton($location),
+				0 => mt_rand(0, 4) === 0 ? new Husk($location) : new Zombie($location),
+				1 => mt_rand(0, 4) === 0 ? new Stray($location) : new Skeleton($location),
 				2 => new Creeper($location),
 				default => new Spider($location),
 			};

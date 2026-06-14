@@ -24,8 +24,11 @@ declare(strict_types=1);
 namespace pocketmine\entity;
 
 use pocketmine\item\Item;
+use pocketmine\item\ItemTypeIds;
 use pocketmine\item\VanillaItems;
+use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
+use pocketmine\player\Player;
 use function mt_rand;
 
 class Cow extends Animal{
@@ -44,6 +47,20 @@ class Cow extends Animal{
 
 	public function getName() : string{
 		return "Cow";
+	}
+
+	public function onInteract(Player $player, Vector3 $clickPos) : bool{
+		$item = $player->getInventory()->getItemInHand();
+		if($item->getTypeId() === ItemTypeIds::BUCKET){
+			//milk the cow: an empty bucket becomes a milk bucket
+			if($player->hasFiniteResources()){
+				$item->pop();
+				$player->getInventory()->setItemInHand($item);
+				$player->getInventory()->addItem(VanillaItems::MILK_BUCKET());
+			}
+			return true;
+		}
+		return parent::onInteract($player, $clickPos);
 	}
 
 	public function getDrops() : array{

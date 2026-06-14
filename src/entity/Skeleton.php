@@ -83,9 +83,16 @@ class Skeleton extends Monster{
 		$this->networkPropertiesDirty = true;
 	}
 
+	/**
+	 * Creates the arrow this skeleton looses. Override for variants that fire special arrows (e.g. a Stray's slowness arrow).
+	 */
+	protected function createArrow(Location $location) : Arrow{
+		return new Arrow($location, $this, false);
+	}
+
 	private function shootArrowAt(TargetCandidate $target) : void{
 		$origin = $this->getEyePos();
-		$arrow = new Arrow(Location::fromObject($origin, $this->getWorld(), $this->location->getYaw(), $this->location->getPitch()), $this, false);
+		$arrow = $this->createArrow(Location::fromObject($origin, $this->getWorld(), $this->location->getYaw(), $this->location->getPitch()));
 
 		$dx = $target->x - $origin->x;
 		$dy = ($target->y + 1.0) - $origin->y;

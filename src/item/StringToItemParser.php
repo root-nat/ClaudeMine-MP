@@ -292,6 +292,8 @@ final class StringToItemParser extends StringToTParser{
 		$result->registerBlock("cocoa_pod", fn() => Blocks::COCOA_POD());
 		$result->registerBlock("cocoa_pods", fn() => Blocks::COCOA_POD());
 		$result->registerBlock("composter", fn() => Blocks::COMPOSTER());
+		$result->registerBlock("honey_block", fn() => Blocks::HONEY_BLOCK());
+		$result->registerBlock("sculk_sensor", fn() => Blocks::SCULK_SENSOR());
 		$result->registerBlock("colored_torch_bp", fn() => Blocks::BLUE_TORCH());
 		$result->registerBlock("colored_torch_rg", fn() => Blocks::RED_TORCH());
 		$result->registerBlock("comparator", fn() => Blocks::REDSTONE_COMPARATOR());
@@ -1584,6 +1586,7 @@ final class StringToItemParser extends StringToTParser{
 		$result->register("shaper_armor_trim_smithing_template", fn() => Items::SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE());
 		$result->register("seeds", fn() => Items::WHEAT_SEEDS());
 		$result->register("shears", fn() => Items::SHEARS());
+		$result->register("shield", fn() => Items::SHIELD());
 		$result->register("shulker_shell", fn() => Items::SHULKER_SHELL());
 		$result->register("silence_armor_trim_smithing_template", fn() => Items::SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE());
 		$result->register("slime_ball", fn() => Items::SLIMEBALL());
@@ -1608,6 +1611,19 @@ final class StringToItemParser extends StringToTParser{
 		$result->register("enderman_spawn_egg", fn() => Items::ENDERMAN_SPAWN_EGG());
 		$result->register("slime_spawn_egg", fn() => Items::SLIME_SPAWN_EGG());
 		$result->register("magma_cube_spawn_egg", fn() => Items::MAGMA_CUBE_SPAWN_EGG());
+		$result->register("husk_spawn_egg", fn() => Items::HUSK_SPAWN_EGG());
+		$result->register("stray_spawn_egg", fn() => Items::STRAY_SPAWN_EGG());
+		$result->register("wither_skeleton_spawn_egg", fn() => Items::WITHER_SKELETON_SPAWN_EGG());
+		$result->register("mooshroom_spawn_egg", fn() => Items::MOOSHROOM_SPAWN_EGG());
+		$result->register("cave_spider_spawn_egg", fn() => Items::CAVE_SPIDER_SPAWN_EGG());
+		$result->register("wolf_spawn_egg", fn() => Items::WOLF_SPAWN_EGG());
+		$result->register("cat_spawn_egg", fn() => Items::CAT_SPAWN_EGG());
+		$result->register("ocelot_spawn_egg", fn() => Items::OCELOT_SPAWN_EGG());
+		$result->register("rabbit_spawn_egg", fn() => Items::RABBIT_SPAWN_EGG());
+		$result->register("fox_spawn_egg", fn() => Items::FOX_SPAWN_EGG());
+		$result->register("drowned_spawn_egg", fn() => Items::DROWNED_SPAWN_EGG());
+		$result->register("blaze_spawn_egg", fn() => Items::BLAZE_SPAWN_EGG());
+		$result->register("ghast_spawn_egg", fn() => Items::GHAST_SPAWN_EGG());
 		$result->register("steak", fn() => Items::STEAK());
 		$result->register("stick", fn() => Items::STICK());
 		$result->register("sticks", fn() => Items::STICK());

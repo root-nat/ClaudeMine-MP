@@ -25,10 +25,18 @@ namespace pocketmine\entity;
 
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use function mt_rand;
 
 class Chicken extends Animal{
+
+	private const TAG_EGG_TIME = "EggLayTime"; //TAG_Int
+	/** Vanilla lays an egg somewhere in this window (5-10 minutes). */
+	private const EGG_LAY_MIN_TICKS = 6000;
+	private const EGG_LAY_MAX_TICKS = 12000;
+
+	private int $eggLayTime = 0;
 
 	public static function getNetworkTypeId() : string{ return EntityIds::CHICKEN; }
 
@@ -51,6 +59,36 @@ class Chicken extends Animal{
 	 */
 	protected function calculateFallDamage(float $fallDistance) : float{
 		return 0.0;
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if($this->closed || !$this->isAlive()){
+			return $hasUpdate;
+		}
+
+		//grown chickens periodically lay an egg on the ground
+		if(!$this->isBaby()){
+			$this->eggLayTime -= $tickDiff;
+			if($this->eggLayTime <= 0){
+				$this->getWorld()->dropItem($this->location, VanillaItems::EGG());
+				$this->eggLayTime = mt_rand(self::EGG_LAY_MIN_TICKS, self::EGG_LAY_MAX_TICKS);
+				$hasUpdate = true;
+			}
+		}
+
+		return $hasUpdate;
+	}
+
+	public function saveNBT() : CompoundTag{
+		$nbt = parent::saveNBT();
+		$nbt->setInt(self::TAG_EGG_TIME, $this->eggLayTime);
+		return $nbt;
+	}
+
+	protected function initEntity(CompoundTag $nbt) : void{
+		$this->eggLayTime = $nbt->getInt(self::TAG_EGG_TIME, mt_rand(self::EGG_LAY_MIN_TICKS, self::EGG_LAY_MAX_TICKS));
+		parent::initEntity($nbt);
 	}
 
 	public function getDrops() : array{
