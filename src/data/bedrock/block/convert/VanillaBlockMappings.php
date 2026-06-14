@@ -1466,22 +1466,27 @@ final class VanillaBlockMappings{
 		$reg->mapModel(Model::create(Blocks::PITCHER_PLANT(), Ids::PITCHER_PLANT)->properties([
 			new BoolProperty(StateNames::UPPER_BLOCK_BIT, fn(DoublePlant $b) => $b->isTop(), fn(DoublePlant $b, bool $v) => $b->setTop($v)), //TODO: don't we have helpers for this?
 		]));
+		//Bedrock's piston facing_direction inverts the HORIZONTAL directions vs the generic facing convention (a piston-
+		//specific quirk; up/down are unchanged). facingEndRod is exactly that horizontal-inverted map, so a piston that
+		//PM-faces the player renders pointing at the player (and the extending arm matches) instead of the opposite way.
 		$pistonFacing = fn(Piston $b) => $b->getFacing();
 		$pistonSetFacing = fn(Piston $b, int $v) => $b->setFacing($v);
 		$reg->mapModel(Model::create(Blocks::PISTON(), Ids::PISTON)->properties([
-			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $pistonFacing, $pistonSetFacing)
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facingEndRod, $pistonFacing, $pistonSetFacing)
 		]));
 		$reg->mapModel(Model::create(Blocks::STICKY_PISTON(), Ids::STICKY_PISTON)->properties([
-			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $pistonFacing, $pistonSetFacing)
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facingEndRod, $pistonFacing, $pistonSetFacing)
 		]));
 		$armFacing = fn(PistonArmCollision $b) => $b->getFacing();
 		$armSetFacing = fn(PistonArmCollision $b, int $v) => $b->setFacing($v);
 		$reg->mapModel(Model::create(Blocks::PISTON_ARM_COLLISION(), Ids::PISTON_ARM_COLLISION)->properties([
-			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $armFacing, $armSetFacing)
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facingEndRod, $armFacing, $armSetFacing)
 		]));
 		$reg->mapModel(Model::create(Blocks::STICKY_PISTON_ARM_COLLISION(), Ids::STICKY_PISTON_ARM_COLLISION)->properties([
-			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facing, $armFacing, $armSetFacing)
+			new ValueFromIntProperty(StateNames::FACING_DIRECTION, ValueMappings::getInstance()->facingEndRod, $armFacing, $armSetFacing)
 		]));
+		//transient block placed where a real block is sliding under a piston; all data lives in its MovingBlock tile
+		$reg->mapSimple(Blocks::MOVING_BLOCK(), Ids::MOVING_BLOCK);
 		$reg->mapModel(Model::create(Blocks::POLISHED_BASALT(), Ids::POLISHED_BASALT)->properties([$commonProperties->pillarAxis]));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BLACKSTONE_BUTTON(), Ids::POLISHED_BLACKSTONE_BUTTON)->properties($commonProperties->buttonProperties));
 		$reg->mapModel(Model::create(Blocks::POLISHED_BLACKSTONE_PRESSURE_PLATE(), Ids::POLISHED_BLACKSTONE_PRESSURE_PLATE)->properties($commonProperties->simplePressurePlateProperties));

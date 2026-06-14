@@ -37,7 +37,7 @@ use function max;
  * (driven through {@link MobContext} and its {@link NodeAccess}).
  */
 final class RandomStrollGoal extends BaseGoal{
-	private const STROLL_CHANCE = 0.008; //~1 in 120 ticks
+	private const STROLL_CHANCE = 0.02; //~1 in 50 ticks - keeps idle mobs visibly wandering instead of standing still
 	private const RADIUS = 8;
 	private const ATTEMPTS = 6;
 	private const SPEED_FACTOR = 0.6;

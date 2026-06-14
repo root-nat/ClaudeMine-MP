@@ -42,4 +42,10 @@ enum MemoryModuleType : string{
 	case ATTACK_COOLDOWN_UNTIL = "attack_cooldown_until";
 	//value type: Vector3 - a remembered home / spawn point
 	case HOME = "home";
+	//value type: TargetCandidate - the nearest player holding this animal's food, tempting it to follow
+	case TEMPTING_PLAYER = "tempting_player";
+	//value type: TargetCandidate - the nearest in-love mate of the same species this animal should approach to breed
+	case BREED_TARGET = "breed_target";
+	//value type: TargetCandidate - the nearest adult of the same species a baby should follow
+	case PARENT = "parent";
 }

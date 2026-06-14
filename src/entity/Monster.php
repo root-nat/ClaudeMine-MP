@@ -27,10 +27,13 @@ use pocketmine\entity\ai\AbstractMob;
 use pocketmine\entity\ai\goal\RandomStrollGoal;
 use pocketmine\entity\ai\sensor\HurtBySensor;
 use pocketmine\entity\ai\sensor\NearestPlayersSensor;
+use function floor;
+use function mt_rand;
 
 /**
  * Base class for hostile monsters. Wires the player-targeting and retaliation sensors plus idle wandering; species
- * declare their own attack goal(s) in registerAttackGoals(). Built on the {@link AbstractMob} AI core.
+ * declare their own attack goal(s) in registerAttackGoals(). Built on the {@link AbstractMob} AI core. Hostile monsters
+ * despawn when far from any player (see {@link MobDespawnRules}) so naturally-spawned mobs don't pile up.
  */
 abstract class Monster extends AbstractMob{
 
@@ -46,4 +49,63 @@ abstract class Monster extends AbstractMob{
 	 * Declares the monster's combat goal(s) (melee, ranged, swell...). Called before idle goals so they take priority.
 	 */
 	abstract protected function registerAttackGoals() : void;
+
+	/**
+	 * Persistent monsters (e.g. named ones) never despawn.
+	 */
+	public function isPersistent() : bool{
+		return $this->getNameTag() !== "";
+	}
+
+	/**
+	 * Whether this monster catches fire in direct daylight (zombies, skeletons...). Override to true for undead.
+	 */
+	protected function burnsInDaylight() : bool{
+		return false;
+	}
+
+	protected function entityBaseTick(int $tickDiff = 1) : bool{
+		$hasUpdate = parent::entityBaseTick($tickDiff);
+		if($this->closed || !$this->isAlive()){
+			return $hasUpdate;
+		}
+
+		if(!$this->isPersistent() && ($this->ticksLived % MobDespawnRules::CHECK_INTERVAL_TICKS) === 0){
+			$roll = mt_rand(0, MobDespawnRules::RANDOM_DESPAWN_PER_CHECK_DENOM - 1);
+			if(MobDespawnRules::shouldDespawn($this->nearestPlayerDistanceSquared(), $roll)){
+				$this->flagForDespawn();
+			}
+		}
+
+		if($this->burnsInDaylight() && !$this->isOnFire()){
+			$this->tickDaylightBurning();
+		}
+
+		return $hasUpdate;
+	}
+
+	private function tickDaylightBurning() : void{
+		$world = $this->getWorld();
+		$x = (int) floor($this->location->x);
+		$z = (int) floor($this->location->z);
+		$highest = $world->getHighestBlockAt($x, $z);
+		$skyExposed = $highest !== null && (int) floor($this->location->y) >= $highest;
+		if(DaylightBurnRules::shouldBurn($world->getTimeOfDay(), $skyExposed, $this->isUnderwater(), $world->getWeather()->isRaining())){
+			$this->setOnFire(8);
+		}
+	}
+
+	private function nearestPlayerDistanceSquared() : ?float{
+		$nearest = null;
+		foreach($this->getWorld()->getPlayers() as $player){
+			if(!$player->isAlive()){
+				continue;
+			}
+			$distSq = $player->getPosition()->distanceSquared($this->location);
+			if($nearest === null || $distSq < $nearest){
+				$nearest = $distSq;
+			}
+		}
+		return $nearest;
+	}
 }

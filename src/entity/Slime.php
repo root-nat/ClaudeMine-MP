@@ -23,7 +23,9 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
-use pocketmine\entity\ai\goal\MeleeAttackGoal;
+use pocketmine\entity\ai\goal\SlimeHopGoal;
+use pocketmine\entity\ai\sensor\HurtBySensor;
+use pocketmine\entity\ai\sensor\NearestPlayersSensor;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\nbt\tag\CompoundTag;
@@ -65,8 +67,21 @@ class Slime extends Monster{
 		$this->networkPropertiesDirty = true;
 	}
 
+	protected function registerBehaviour() : void{
+		//slimes don't path-walk - they hop. SlimeHopGoal owns all movement (wander + chase) and deals the contact
+		//damage when it lands on a target, so it replaces the usual stroll + melee-approach goals entirely.
+		$this->addSensor(new NearestPlayersSensor($this->getFollowRange()));
+		$this->addSensor(new HurtBySensor());
+		//hop params are read live from the current size, so split children (resized after construction) hop correctly
+		$this->addGoal(3, new SlimeHopGoal(fn() : array => [
+			SlimeSizeLogic::hopIntervalTicks($this->slimeSize),
+			10,
+			SlimeSizeLogic::hopHorizontalSpeed($this->slimeSize),
+		]));
+	}
+
 	protected function registerAttackGoals() : void{
-		$this->addGoal(2, new MeleeAttackGoal());
+		//unused: SlimeHopGoal (added in registerBehaviour) handles both movement and the contact attack
 	}
 
 	protected function getTouchDamage() : int{

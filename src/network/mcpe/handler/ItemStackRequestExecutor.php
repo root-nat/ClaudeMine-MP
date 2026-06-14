@@ -24,14 +24,17 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe\handler;
 
 use pocketmine\block\Beacon;
+use pocketmine\block\inventory\AnvilInventory;
 use pocketmine\block\inventory\BeaconInventory;
 use pocketmine\block\inventory\EnchantInventory;
 use pocketmine\block\tile\Beacon as TileBeacon;
+use pocketmine\block\utils\AnvilHelper;
 use pocketmine\block\utils\BeaconLogic;
 use pocketmine\inventory\Inventory;
 use pocketmine\inventory\transaction\action\CreateItemAction;
 use pocketmine\inventory\transaction\action\DestroyItemAction;
 use pocketmine\inventory\transaction\action\DropItemAction;
+use pocketmine\inventory\transaction\AnvilTransaction;
 use pocketmine\inventory\transaction\CraftingTransaction;
 use pocketmine\inventory\transaction\EnchantingTransaction;
 use pocketmine\inventory\transaction\InventoryTransaction;
@@ -48,6 +51,7 @@ use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\BeaconPaymentS
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftingConsumeInputStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftingCreateSpecificResultStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeAutoStackRequestAction;
+use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeOptionalStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CreativeCreateStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\DeprecatedCraftingResultsStackRequestAction;
@@ -301,7 +305,7 @@ class ItemStackRequestExecutor{
 	 * @throws ItemStackRequestProcessException
 	 */
 	private function assertDoingCrafting() : void{
-		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction){
+		if(!$this->specialTransaction instanceof CraftingTransaction && !$this->specialTransaction instanceof EnchantingTransaction && !$this->specialTransaction instanceof AnvilTransaction){
 			if($this->specialTransaction === null){
 				throw new ItemStackRequestProcessException("Expected CraftRecipe or CraftRecipeAuto action to precede this action");
 			}else{
@@ -357,6 +361,26 @@ class ItemStackRequestExecutor{
 			}else{
 				$this->beginCrafting($action->getRecipeId(), $action->getRepetitions());
 			}
+		}elseif($action instanceof CraftRecipeOptionalStackRequestAction){
+			//anvil result take (also used by cartography map renaming, which is not supported here)
+			$window = $this->player->getCurrentWindow();
+			if(!$window instanceof AnvilInventory){
+				throw new ItemStackRequestProcessException("Optional recipe action is only supported for anvils");
+			}
+			$filterStrings = $this->request->getFilterStrings();
+			$index = $action->getFilterStringIndex();
+			$newName = ($index >= 0 && isset($filterStrings[$index])) ? $filterStrings[$index] : null;
+
+			$combine = $window->computeResult($newName);
+			if($combine === null){
+				throw new ItemStackRequestProcessException("Invalid anvil combination");
+			}
+			if($this->player->hasFiniteResources() && $combine->cost >= AnvilHelper::TOO_EXPENSIVE_COST){
+				throw new ItemStackRequestProcessException("Anvil operation is too expensive");
+			}
+
+			$this->specialTransaction = new AnvilTransaction($this->player, $combine->result, $combine->cost);
+			$this->setNextCreatedItem($combine->result);
 		}elseif($action instanceof CraftRecipeAutoStackRequestAction){
 			$this->beginCrafting($action->getRecipeId(), $action->getRepetitions());
 		}elseif($action instanceof CraftingConsumeInputStackRequestAction){

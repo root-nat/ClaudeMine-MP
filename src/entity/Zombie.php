@@ -23,17 +23,13 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
-use pocketmine\entity\ai\AbstractMob;
 use pocketmine\entity\ai\goal\MeleeAttackGoal;
-use pocketmine\entity\ai\goal\RandomStrollGoal;
-use pocketmine\entity\ai\sensor\HurtBySensor;
-use pocketmine\entity\ai\sensor\NearestPlayersSensor;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use function mt_rand;
 
-class Zombie extends AbstractMob{
+class Zombie extends Monster{
 
 	public static function getNetworkTypeId() : string{ return EntityIds::ZOMBIE; }
 
@@ -45,12 +41,12 @@ class Zombie extends AbstractMob{
 		return "Zombie";
 	}
 
-	protected function registerBehaviour() : void{
-		$this->addSensor(new NearestPlayersSensor($this->getFollowRange()));
-		$this->addSensor(new HurtBySensor());
-
+	protected function registerAttackGoals() : void{
 		$this->addGoal(1, new MeleeAttackGoal());
-		$this->addGoal(7, new RandomStrollGoal());
+	}
+
+	protected function burnsInDaylight() : bool{
+		return true; //zombies catch fire in the morning sun
 	}
 
 	public function getDrops() : array{

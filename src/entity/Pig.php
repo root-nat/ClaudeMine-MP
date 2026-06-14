@@ -32,6 +32,8 @@ class Pig extends Animal{
 
 	public static function getNetworkTypeId() : string{ return EntityIds::PIG; }
 
+	protected function getBreedingSpecies() : ?string{ return BreedingHelper::PIG; }
+
 	protected function getInitialSizeInfo() : EntitySizeInfo{
 		return new EntitySizeInfo($this->isBaby() ? 0.45 : 0.9, $this->isBaby() ? 0.45 : 0.9);
 	}

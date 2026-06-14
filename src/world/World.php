@@ -30,6 +30,7 @@ use pocketmine\block\Air;
 use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\block\LightningRod;
+use pocketmine\entity\NaturalSpawner;
 use pocketmine\block\RuntimeBlockStateRegistry;
 use pocketmine\block\tile\Spawnable;
 use pocketmine\block\tile\Tile;
@@ -1454,6 +1455,11 @@ class World implements ChunkManager{
 			if($y !== null){
 				$this->strikeLightning(new Vector3($x + 0.5, $y + 1, $z + 0.5));
 			}
+		}
+
+		//natural mob spawning: attempted at a low rate per ticking chunk (already near players), bounded by population caps
+		if($this->gameRules->getBool(GameRule::DO_MOB_SPAWNING) && mt_rand(0, 599) === 0){
+			NaturalSpawner::attempt($this, $chunkX, $chunkZ);
 		}
 
 		$tickedBlocksPerSubchunk = $this->tickedBlocksPerSubchunkPerTick * $this->gameRules->getInt(GameRule::RANDOM_TICK_SPEED);

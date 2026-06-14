@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\block\inventory;
 
+use pocketmine\block\utils\AnvilHelper;
+use pocketmine\block\utils\AnvilResult;
 use pocketmine\inventory\SimpleInventory;
 use pocketmine\inventory\TemporaryInventory;
 use pocketmine\world\Position;
@@ -36,5 +38,21 @@ class AnvilInventory extends SimpleInventory implements BlockInventory, Temporar
 	public function __construct(Position $holder){
 		$this->holder = $holder;
 		parent::__construct(2);
+	}
+
+	public function getInput() : \pocketmine\item\Item{
+		return $this->getItem(self::SLOT_INPUT);
+	}
+
+	public function getMaterial() : \pocketmine\item\Item{
+		return $this->getItem(self::SLOT_MATERIAL);
+	}
+
+	/**
+	 * Computes the vanilla anvil result (repaired/combined/renamed item and its XP cost) for the current input and
+	 * material, or null if the combination is invalid. $newName is the requested rename (null = keep name).
+	 */
+	public function computeResult(?string $newName) : ?AnvilResult{
+		return AnvilHelper::tryCombine($this->getInput(), $this->getMaterial(), $newName);
 	}
 }

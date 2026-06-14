@@ -81,6 +81,10 @@ class BrewingStand extends Spawnable implements Container, Nameable{
 		if($this->remainingFuelTime === 0){
 			$this->maxFuelTime = $this->remainingFuelTime = $this->brewTime = 0;
 		}
+		if($this->remainingFuelTime > 0){
+			//resume an in-progress brew when the chunk is loaded back in, like vanilla
+			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 1);
+		}
 	}
 
 	protected function writeSaveData(CompoundTag $nbt) : void{

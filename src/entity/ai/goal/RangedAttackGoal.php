@@ -42,16 +42,23 @@ final class RangedAttackGoal extends BaseGoal{
 
 	private PathNavigator $navigator;
 	private int $cooldown = 0;
+	private int $drawTicks = -1; //-1 = not drawing; otherwise ticks of bow draw remaining before release
+	private bool $drawing = false;
 
 	/**
-	 * @param \Closure $shooter invoked to launch a projectile at the target
+	 * @param \Closure      $shooter         invoked to launch a projectile at the target
+	 * @param int           $drawDurationTicks ticks the mob visibly draws/charges before each shot (0 = fire instantly)
+	 * @param \Closure|null $onDrawingChange  notified (bool) when the draw pose starts/stops, e.g. to toggle an aim flag
 	 * @phpstan-param \Closure(TargetCandidate) : void $shooter
+	 * @phpstan-param (\Closure(bool) : void)|null $onDrawingChange
 	 */
 	public function __construct(
 		private \Closure $shooter,
 		private float $shootRange = 12.0,
 		private float $minRange = 4.0,
 		private int $attackIntervalTicks = 30,
+		private int $drawDurationTicks = 0,
+		private ?\Closure $onDrawingChange = null,
 		private AStarPathFinder $pathFinder = new AStarPathFinder()
 	){
 		$this->navigator = new PathNavigator();
@@ -72,6 +79,7 @@ final class RangedAttackGoal extends BaseGoal{
 
 	public function stop(MobContext $mob) : void{
 		$this->navigator->setPath(null);
+		$this->cancelDraw();
 	}
 
 	public function tick(MobContext $mob) : void{
@@ -126,9 +134,37 @@ final class RangedAttackGoal extends BaseGoal{
 			}
 		}
 
-		if($distance <= $this->shootRange && $this->cooldown <= 0){
-			($this->shooter)($target);
-			$this->cooldown = $this->attackIntervalTicks;
+		if($distance <= $this->shootRange){
+			//start drawing once off cooldown, then release the arrow when the draw completes (vanilla bow windup)
+			if($this->drawTicks < 0 && $this->cooldown <= 0){
+				$this->drawTicks = $this->drawDurationTicks;
+				$this->setDrawing(true);
+			}
+			if($this->drawTicks === 0){
+				($this->shooter)($target);
+				$this->cooldown = $this->attackIntervalTicks;
+				$this->drawTicks = -1;
+				$this->setDrawing(false);
+			}elseif($this->drawTicks > 0){
+				--$this->drawTicks;
+			}
+		}else{
+			$this->cancelDraw();
 		}
+	}
+
+	private function setDrawing(bool $drawing) : void{
+		if($drawing === $this->drawing){
+			return;
+		}
+		$this->drawing = $drawing;
+		if($this->onDrawingChange !== null){
+			($this->onDrawingChange)($drawing);
+		}
+	}
+
+	private function cancelDraw() : void{
+		$this->drawTicks = -1;
+		$this->setDrawing(false);
 	}
 }

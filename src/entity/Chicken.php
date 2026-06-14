@@ -32,6 +32,8 @@ class Chicken extends Animal{
 
 	public static function getNetworkTypeId() : string{ return EntityIds::CHICKEN; }
 
+	protected function getBreedingSpecies() : ?string{ return BreedingHelper::CHICKEN; }
+
 	protected function getInitialSizeInfo() : EntitySizeInfo{
 		return new EntitySizeInfo($this->isBaby() ? 0.35 : 0.7, $this->isBaby() ? 0.2 : 0.4);
 	}

@@ -32,6 +32,8 @@ class Cow extends Animal{
 
 	public static function getNetworkTypeId() : string{ return EntityIds::COW; }
 
+	protected function getBreedingSpecies() : ?string{ return BreedingHelper::COW; }
+
 	protected function getInitialSizeInfo() : EntitySizeInfo{
 		return new EntitySizeInfo($this->isBaby() ? 0.7 : 1.4, $this->isBaby() ? 0.45 : 0.9);
 	}

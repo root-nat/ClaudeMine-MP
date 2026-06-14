@@ -92,4 +92,26 @@ final class SlimeSizeLogic{
 	public static function splitCount(int $randomRoll) : int{
 		return 2 + ($randomRoll % 3); //2, 3 or 4
 	}
+
+	/**
+	 * Base ticks between idle hops; larger slimes are heavier and hop a little less often (a random jitter is added live).
+	 */
+	public static function hopIntervalTicks(int $size) : int{
+		return match(self::clampSize($size)){
+			self::SIZE_SMALL => 10,
+			self::SIZE_MEDIUM => 13,
+			default => 16,
+		};
+	}
+
+	/**
+	 * Horizontal velocity (blocks/tick) added on each hop; larger slimes cover more ground per leap.
+	 */
+	public static function hopHorizontalSpeed(int $size) : float{
+		return match(self::clampSize($size)){
+			self::SIZE_SMALL => 0.24,
+			self::SIZE_MEDIUM => 0.30,
+			default => 0.36,
+		};
+	}
 }

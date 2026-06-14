@@ -23,11 +23,18 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
+use pocketmine\block\utils\TripwireHookLogic;
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\entity\Entity;
 use pocketmine\item\Item;
 use pocketmine\item\VanillaItems;
+use pocketmine\math\AxisAlignedBB;
+use pocketmine\math\Facing;
+use function count;
 
 class Tripwire extends Flowable{
+	private const RECHECK_DELAY_TICKS = 10;
+
 	protected bool $triggered = false;
 	protected bool $suspended = false; //unclear usage, makes hitbox bigger if set
 	protected bool $connected = false;
@@ -70,6 +77,64 @@ class Tripwire extends Flowable{
 	public function setDisarmed(bool $disarmed) : self{
 		$this->disarmed = $disarmed;
 		return $this;
+	}
+
+	public function hasEntityCollision() : bool{
+		return true;
+	}
+
+	public function onEntityInside(Entity $entity) : bool{
+		if(!$this->triggered){
+			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 0);
+		}
+		return true;
+	}
+
+	private function getActivationBox() : AxisAlignedBB{
+		return AxisAlignedBB::one()->offset($this->position->x, $this->position->y, $this->position->z);
+	}
+
+	public function onScheduledUpdate() : void{
+		$world = $this->position->getWorld();
+		$triggered = count($world->getNearbyEntities($this->getActivationBox())) > 0;
+		if($triggered !== $this->triggered){
+			$this->triggered = $triggered;
+			$world->setBlock($this->position, $this);
+			$this->notifyHooks();
+		}
+		if($triggered){
+			$world->scheduleDelayedBlockUpdate($this->position, self::RECHECK_DELAY_TICKS);
+		}
+	}
+
+	public function onPostPlace() : void{
+		$this->notifyHooks();
+	}
+
+	public function onNearbyBlockChange() : void{
+		$this->notifyHooks();
+	}
+
+	/**
+	 * Walks the string line out to the hook at each end of this wire's row and asks each to recompute its circuit, so a
+	 * step on (or change to) any string updates the redstone output of the hooks.
+	 */
+	private function notifyHooks() : void{
+		$world = $this->position->getWorld();
+		foreach(Facing::HORIZONTAL as $direction){
+			for($d = 1; $d <= TripwireHookLogic::MAX_DISTANCE; ++$d){
+				$block = $world->getBlock($this->position->getSide($direction, $d));
+				if($block instanceof TripwireHook){
+					if($block->getFacing() === Facing::opposite($direction)){
+						$block->recalculateState();
+					}
+					break;
+				}
+				if(!($block instanceof Tripwire)){
+					break;
+				}
+			}
+		}
 	}
 
 	public function asItem() : Item{

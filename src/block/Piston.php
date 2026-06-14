@@ -23,6 +23,9 @@ declare(strict_types=1);
 
 namespace pocketmine\block;
 
+use pocketmine\block\tile\MovingBlock as MovingBlockTile;
+use pocketmine\block\tile\PistonArmCollision as PistonArmCollisionTile;
+use pocketmine\block\tile\Spawnable;
 use pocketmine\block\utils\AnyFacing;
 use pocketmine\block\utils\AnyFacingTrait;
 use pocketmine\block\utils\PistonStructureResolver;
@@ -62,6 +65,10 @@ class Piston extends Opaque implements AnyFacing{
 	}
 
 	public function onPostPlace() : void{
+		$tile = $this->getPistonTile();
+		if($tile !== null){
+			$tile->setSticky($this->isSticky());
+		}
 		$this->onNearbyBlockChange();
 	}
 
@@ -74,6 +81,17 @@ class Piston extends Opaque implements AnyFacing{
 	}
 
 	public function onScheduledUpdate() : void{
+		$tile = $this->getPistonTile();
+		if($tile !== null && $tile->isMoving()){
+			//the animation window elapsed: commit the block movement and settle the state
+			if($tile->getState() === PistonArmCollisionTile::STATE_EXTENDING){
+				$this->finishExtend($tile);
+			}else{
+				$this->finishRetract($tile);
+			}
+			return;
+		}
+
 		$powered = $this->isReceivingRedstonePower();
 		$extended = $this->isExtended();
 		if($powered && !$extended){
@@ -87,6 +105,27 @@ class Piston extends Opaque implements AnyFacing{
 		return $this->getSide($this->facing) instanceof PistonArmCollision;
 	}
 
+	private function getPistonTile() : ?PistonArmCollisionTile{
+		$tile = $this->position->getWorld()->getTile($this->position);
+		return $tile instanceof PistonArmCollisionTile ? $tile : null;
+	}
+
+	/**
+	 * Re-sends a tile's spawn NBT to clients by invalidating its cache and marking the block changed (no neighbour
+	 * updates, so a mid-slide block doesn't trigger redstone/gravity).
+	 */
+	private function resyncTile(Vector3 $pos) : void{
+		$world = $this->position->getWorld();
+		$tile = $world->getTile($pos);
+		if($tile instanceof Spawnable){
+			$tile->clearSpawnCompoundCache();
+		}
+		$world->setBlock($pos, $world->getBlock($pos), false);
+	}
+
+	/**
+	 * @phpstan-return \Closure(Vector3) : PistonStructureResolver::REACTION_*
+	 */
 	private function buildReactionResolver(World $world) : \Closure{
 		return function(Vector3 $pos) use ($world) : int{
 			$block = $world->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ());
@@ -94,7 +133,7 @@ class Piston extends Opaque implements AnyFacing{
 			if($typeId === BlockTypeIds::AIR){
 				return PistonStructureResolver::REACTION_AIR;
 			}
-			if($block instanceof Piston || $block instanceof PistonArmCollision){
+			if($block instanceof Piston || $block instanceof PistonArmCollision || $block instanceof MovingBlock){
 				return PistonStructureResolver::REACTION_BLOCK;
 			}
 			if(!$block->getBreakInfo()->isBreakable() || $typeId === BlockTypeIds::OBSIDIAN){
@@ -127,45 +166,143 @@ class Piston extends Opaque implements AnyFacing{
 			$world->useBreakOn($pos);
 		}
 
-		/** @var array{Vector3, Block}[] $captured */
+		$tile = $this->getPistonTile();
+		if($tile === null){
+			//legacy piston without an animation tile: fall back to an instant move so it still works
+			$this->instantExtend($move, $origin);
+			return true;
+		}
+
+		//turn each pushed block into a sliding moving_block at its CURRENT position; the real blocks are placed at their
+		//destinations only when the animation finishes, so the client renders them sliding toward the destination.
+		$attached = [];
+		foreach($move as $pos){
+			$block = $world->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ());
+			$world->setBlock($pos, VanillaBlocks::MOVING_BLOCK(), false);
+			$moving = $world->getTile($pos);
+			if($moving instanceof MovingBlockTile){
+				$moving->setMovingBlock($block);
+				$moving->setPistonPosition($this->position);
+				$this->resyncTile($pos);
+			}
+			$attached[] = $pos;
+		}
+
+		$tile->setSticky($this->isSticky());
+		$tile->startMovement(PistonArmCollisionTile::STATE_EXTENDING, 0.0, $attached, []);
+		$this->resyncTile($this->position);
+
+		$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOnSound());
+		$world->scheduleDelayedBlockUpdate($this->position, self::ACTION_DELAY_TICKS);
+		return true;
+	}
+
+	private function finishExtend(PistonArmCollisionTile $tile) : void{
+		$world = $this->position->getWorld();
+		$facing = $this->facing;
+
+		$captured = [];
+		foreach($tile->getAttachedBlocks() as $pos){
+			$moving = $world->getTile($pos);
+			$block = $moving instanceof MovingBlockTile ? $moving->getMovingBlock() : null;
+			if($block !== null){
+				$captured[] = [$pos->getSide($facing), $block];
+			}
+			$world->setBlock($pos, VanillaBlocks::AIR(), false);
+		}
+		foreach($captured as [$dest, $block]){
+			$world->setBlock($dest, $block, false);
+		}
+
+		$world->setBlock($this->position->getSide($facing), $this->getArmCollisionBlock()->setFacing($facing));
+		$tile->finishMovement(PistonArmCollisionTile::STATE_EXTENDED);
+		$this->resyncTile($this->position);
+	}
+
+	/**
+	 * @param Vector3[] $move
+	 */
+	private function instantExtend(array $move, Vector3 $origin) : void{
+		$world = $this->position->getWorld();
 		$captured = [];
 		foreach($move as $pos){
 			$captured[] = [$pos, $world->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ())];
 		}
 		foreach($move as $pos){
-			$world->setBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ(), VanillaBlocks::AIR());
+			$world->setBlock($pos, VanillaBlocks::AIR());
 		}
 		foreach($captured as [$pos, $block]){
-			$dest = $pos->getSide($this->facing);
-			$world->setBlockAt($dest->getFloorX(), $dest->getFloorY(), $dest->getFloorZ(), $block);
+			$world->setBlock($pos->getSide($this->facing), $block);
 		}
-
 		$world->setBlock($origin, $this->getArmCollisionBlock()->setFacing($this->facing));
 		$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOnSound());
-		return true;
 	}
 
 	private function retract() : void{
 		$world = $this->position->getWorld();
-		$origin = $this->position->getSide($this->facing);
-		if(!$world->getBlock($origin) instanceof PistonArmCollision){
+		$armPos = $this->position->getSide($this->facing);
+		if(!$world->getBlock($armPos) instanceof PistonArmCollision){
 			return;
 		}
+		$world->setBlock($armPos, VanillaBlocks::AIR(), false);
 
+		$attached = [];
 		if($this->isSticky()){
-			$pullPos = $origin->getSide($this->facing);
+			$pullPos = $armPos->getSide($this->facing);
 			$reaction = ($this->buildReactionResolver($world))($pullPos);
 			if($reaction === PistonStructureResolver::REACTION_NORMAL || $reaction === PistonStructureResolver::REACTION_STICKY){
 				$pulled = $world->getBlock($pullPos);
-				$world->setBlock($pullPos, VanillaBlocks::AIR());
-				$world->setBlock($origin, $pulled);
-				$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOffSound());
-				return;
+				$world->setBlock($pullPos, VanillaBlocks::MOVING_BLOCK(), false);
+				$moving = $world->getTile($pullPos);
+				if($moving instanceof MovingBlockTile){
+					$moving->setMovingBlock($pulled);
+					$moving->setPistonPosition($this->position);
+					$this->resyncTile($pullPos);
+				}
+				$attached[] = $pullPos;
 			}
 		}
 
-		$world->setBlock($origin, VanillaBlocks::AIR());
+		$tile = $this->getPistonTile();
+		if($tile === null){
+			//legacy piston without an animation tile: settle instantly
+			$this->finishRetractPositions($attached);
+			$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOffSound());
+			return;
+		}
+
+		$tile->setSticky($this->isSticky());
+		$tile->startMovement(PistonArmCollisionTile::STATE_RETRACTING, 1.0, $attached, []);
+		$this->resyncTile($this->position);
+
 		$world->addSound($this->position->add(0.5, 0.5, 0.5), new RedstonePowerOffSound());
+		$world->scheduleDelayedBlockUpdate($this->position, self::ACTION_DELAY_TICKS);
+	}
+
+	private function finishRetract(PistonArmCollisionTile $tile) : void{
+		$this->finishRetractPositions($tile->getAttachedBlocks());
+		$tile->finishMovement(PistonArmCollisionTile::STATE_RETRACTED);
+		$this->resyncTile($this->position);
+	}
+
+	/**
+	 * @param Vector3[] $positions
+	 */
+	private function finishRetractPositions(array $positions) : void{
+		$world = $this->position->getWorld();
+		$opposite = Facing::opposite($this->facing);
+		$captured = [];
+		foreach($positions as $pos){
+			$moving = $world->getTile($pos);
+			$block = $moving instanceof MovingBlockTile ? $moving->getMovingBlock() : null;
+			if($block !== null){
+				$captured[] = [$pos->getSide($opposite), $block];
+			}
+			$world->setBlock($pos, VanillaBlocks::AIR(), false);
+		}
+		foreach($captured as [$dest, $block]){
+			$world->setBlock($dest, $block, false);
+		}
 	}
 
 	public function onBreak(Item $item, ?Player $player = null, array &$returnedItems = []) : bool{

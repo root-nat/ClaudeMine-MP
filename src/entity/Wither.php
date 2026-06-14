@@ -55,6 +55,10 @@ class Wither extends Monster{
 		return "Wither";
 	}
 
+	public function isPersistent() : bool{
+		return true; //bosses never despawn
+	}
+
 	protected function registerBehaviour() : void{
 		$this->bossBar = new BossBar("Wither", BossBarColor::PURPLE, true);
 		parent::registerBehaviour();
