@@ -24,6 +24,12 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\block\tile\Note as TileNote;
+use pocketmine\block\utils\NoteBlockInstruments;
+use pocketmine\item\Item;
+use pocketmine\math\Facing;
+use pocketmine\math\Vector3;
+use pocketmine\player\Player;
+use pocketmine\world\sound\NoteSound;
 use function assert;
 
 class Note extends Opaque{
@@ -68,5 +74,33 @@ class Note extends Opaque{
 		return $this;
 	}
 
-	//TODO
+	private function playNote() : void{
+		$world = $this->position->getWorld();
+		$instrument = NoteBlockInstruments::fromBlockBelow($this->getSide(Facing::DOWN));
+		$world->addSound($this->position->add(0.5, 0.5, 0.5), new NoteSound($instrument, $this->pitch));
+	}
+
+	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
+		$this->pitch = ($this->pitch + 1) % (self::MAX_PITCH + 1);
+		$this->position->getWorld()->setBlock($this->position, $this);
+		$this->playNote();
+		return true;
+	}
+
+	public function onNearbyBlockChange() : void{
+		$tile = $this->position->getWorld()->getTile($this->position);
+		if(!$tile instanceof TileNote){
+			return;
+		}
+		//play once on a rising redstone edge; the previous powered state is persisted in the tile (not a block state, so
+		//it doesn't affect the Bedrock serialization), letting us tell a fresh power signal from an unrelated neighbour change
+		$powered = $this->isReceivingRedstonePower();
+		if($powered === $tile->isPowered()){
+			return;
+		}
+		$tile->setPowered($powered);
+		if($powered){
+			$this->playNote();
+		}
+	}
 }

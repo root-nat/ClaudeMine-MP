@@ -23,7 +23,9 @@ declare(strict_types=1);
 
 namespace pocketmine\block\tile;
 
+use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\world\World;
 
 final class Beacon extends Spawnable{
 	private const TAG_PRIMARY = "primary"; //TAG_Int
@@ -31,6 +33,13 @@ final class Beacon extends Spawnable{
 
 	private int $primaryEffect = 0;
 	private int $secondaryEffect = 0;
+
+	public function __construct(World $world, Vector3 $pos){
+		parent::__construct($world, $pos);
+		//start the effect-application loop when the tile is (re)created, e.g. after a chunk load; deduplicated against the
+		//block's own scheduling by World::scheduleDelayedBlockUpdate
+		$world->scheduleDelayedBlockUpdate($this->position, 1);
+	}
 
 	protected function addAdditionalSpawnData(CompoundTag $nbt) : void{
 		$nbt->setInt(self::TAG_PRIMARY, $this->primaryEffect);

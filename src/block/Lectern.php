@@ -26,6 +26,7 @@ namespace pocketmine\block;
 use pocketmine\block\tile\Lectern as TileLectern;
 use pocketmine\block\utils\FacesOppositePlacingPlayerTrait;
 use pocketmine\block\utils\HorizontalFacing;
+use pocketmine\block\utils\LecternComparator;
 use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\item\Item;
@@ -97,6 +98,14 @@ class Lectern extends Transparent implements HorizontalFacing{
 	public function setProducingSignal(bool $producingSignal) : self{
 		$this->producingSignal = $producingSignal;
 		return $this;
+	}
+
+	/**
+	 * The redstone signal a comparator reads from this lectern: 0 with no book, otherwise scaled by how far through the
+	 * book the reader has turned (1 on the first page up to 15 on the last).
+	 */
+	public function getComparatorSignal() : int{
+		return $this->book === null ? 0 : LecternComparator::signalStrength($this->viewedPage, count($this->book->getPages()));
 	}
 
 	public function getViewedPage() : int{

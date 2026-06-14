@@ -32,6 +32,7 @@ use pocketmine\lang\KnownTranslationFactory;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
+use pocketmine\world\Dimension;
 use pocketmine\world\Explosion;
 use pocketmine\world\Position;
 use pocketmine\world\sound\RespawnAnchorChargeSound;
@@ -77,7 +78,11 @@ final class RespawnAnchor extends Opaque{
 				return false;
 			}
 
-			$ev = new PlayerRespawnAnchorUseEvent($player, $this, PlayerRespawnAnchorUseEvent::ACTION_EXPLODE);
+			//vanilla: a charged anchor sets the spawn when used in the Nether, and explodes in any other dimension
+			$defaultAction = $this->position->getWorld()->getDimension() === Dimension::NETHER ?
+				PlayerRespawnAnchorUseEvent::ACTION_SET_SPAWN :
+				PlayerRespawnAnchorUseEvent::ACTION_EXPLODE;
+			$ev = new PlayerRespawnAnchorUseEvent($player, $this, $defaultAction);
 			$ev->call();
 			if($ev->isCancelled()){
 				return false;

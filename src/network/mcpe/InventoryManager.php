@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe;
 
 use pocketmine\block\inventory\AnvilInventory;
+use pocketmine\block\inventory\BeaconInventory;
 use pocketmine\block\inventory\BlockInventory;
 use pocketmine\block\inventory\BrewingStandInventory;
 use pocketmine\block\inventory\DispenserInventory;
@@ -318,6 +319,7 @@ class InventoryManager{
 		//TODO: make this dynamic so plugins can add mappings for stuff not implemented by PM
 		return match(true){
 			$inventory instanceof AnvilInventory => UIInventorySlotOffset::ANVIL,
+			$inventory instanceof BeaconInventory => [UIInventorySlotOffset::BEACON_PAYMENT => BeaconInventory::SLOT_PAYMENT],
 			$inventory instanceof EnchantInventory => UIInventorySlotOffset::ENCHANTING_TABLE,
 			$inventory instanceof LoomInventory => UIInventorySlotOffset::LOOM,
 			$inventory instanceof StonecutterInventory => [UIInventorySlotOffset::STONE_CUTTER_INPUT => StonecutterInventory::SLOT_INPUT],
@@ -379,6 +381,7 @@ class InventoryManager{
 						FurnaceType::CAMPFIRE, FurnaceType::SOUL_CAMPFIRE => throw new \LogicException("Campfire inventory cannot be displayed to a player")
 					},
 				$inv instanceof EnchantInventory => WindowTypes::ENCHANTMENT,
+				$inv instanceof BeaconInventory => WindowTypes::BEACON,
 				$inv instanceof BrewingStandInventory => WindowTypes::BREWING_STAND,
 				$inv instanceof AnvilInventory => WindowTypes::ANVIL,
 				$inv instanceof HopperInventory => WindowTypes::HOPPER,

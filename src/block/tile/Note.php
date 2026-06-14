@@ -31,15 +31,26 @@ use pocketmine\nbt\tag\CompoundTag;
  */
 class Note extends Tile{
 	private int $pitch = 0;
+	private bool $powered = false;
 
 	public function readSaveData(CompoundTag $nbt) : void{
-		if(($pitch = $nbt->getByte("note", $this->pitch)) > BlockNote::MIN_PITCH && $pitch <= BlockNote::MAX_PITCH){
+		if(($pitch = $nbt->getByte("note", $this->pitch)) >= BlockNote::MIN_PITCH && $pitch <= BlockNote::MAX_PITCH){
 			$this->pitch = $pitch;
 		}
+		$this->powered = $nbt->getByte("powered", 0) !== 0;
 	}
 
 	protected function writeSaveData(CompoundTag $nbt) : void{
 		$nbt->setByte("note", $this->pitch);
+		$nbt->setByte("powered", $this->powered ? 1 : 0);
+	}
+
+	public function isPowered() : bool{
+		return $this->powered;
+	}
+
+	public function setPowered(bool $powered) : void{
+		$this->powered = $powered;
 	}
 
 	public function getPitch() : int{

@@ -163,6 +163,10 @@ class RedstoneComparator extends Flowable implements AnalogRedstoneSignalEmitter
 			return self::calculateContainerSignal($tile->getInventory());
 		}
 		$input = $this->getSide($this->facing);
+		if($input instanceof Lectern){
+			//a lectern behind a comparator outputs a signal proportional to the page being read
+			return $input->getComparatorSignal();
+		}
 		$inputFace = Facing::opposite($this->facing);
 		return max($input->getWeakRedstonePower($inputFace), $input->getStrongRedstonePower($inputFace));
 	}

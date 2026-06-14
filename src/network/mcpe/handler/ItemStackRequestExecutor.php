@@ -23,7 +23,11 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe\handler;
 
+use pocketmine\block\Beacon;
+use pocketmine\block\inventory\BeaconInventory;
 use pocketmine\block\inventory\EnchantInventory;
+use pocketmine\block\tile\Beacon as TileBeacon;
+use pocketmine\block\utils\BeaconLogic;
 use pocketmine\inventory\Inventory;
 use pocketmine\inventory\transaction\action\CreateItemAction;
 use pocketmine\inventory\transaction\action\DestroyItemAction;
@@ -35,10 +39,12 @@ use pocketmine\inventory\transaction\TransactionBuilder;
 use pocketmine\inventory\transaction\TransactionBuilderInventory;
 use pocketmine\item\Durable;
 use pocketmine\item\Item;
+use pocketmine\item\VanillaItems;
 use pocketmine\network\mcpe\cache\CraftingDataCache;
 use pocketmine\network\mcpe\InventoryManager;
 use pocketmine\network\mcpe\protocol\types\inventory\ContainerUIIds;
 use pocketmine\network\mcpe\protocol\types\inventory\FullContainerName;
+use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\BeaconPaymentStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftingConsumeInputStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftingCreateSpecificResultStackRequestAction;
 use pocketmine\network\mcpe\protocol\types\inventory\stackrequest\CraftRecipeAutoStackRequestAction;
@@ -377,6 +383,37 @@ class ItemStackRequestExecutor{
 				$usedItem->setDamage($predictedDamage);
 				$this->inventoryManager->addPredictedSlotChange($inventory, $slot, $usedItem);
 			}
+		}elseif($action instanceof BeaconPaymentStackRequestAction){
+			$window = $this->player->getCurrentWindow();
+			if(!$window instanceof BeaconInventory){
+				throw new ItemStackRequestProcessException("Beacon payment action without an open beacon");
+			}
+			$position = $window->getHolder();
+			$world = $position->getWorld();
+			$tile = $world->getTile($position);
+			$block = $world->getBlock($position);
+			if(!$tile instanceof TileBeacon || !$block instanceof Beacon){
+				throw new ItemStackRequestProcessException("No beacon at the open window position");
+			}
+
+			$level = $block->calculatePyramidLevel();
+			$primary = $action->getPrimaryEffectId();
+			$secondary = $action->getSecondaryEffectId();
+			if(($primary !== 0 && !BeaconLogic::isAllowedPrimary($level, $primary)) || !BeaconLogic::isAllowedSecondary($level, $primary, $secondary)){
+				throw new ItemStackRequestProcessException("Effect selection not allowed for this beacon's level");
+			}
+
+			$payment = $window->getPayment();
+			if(!BeaconLogic::isValidPayment($payment)){
+				throw new ItemStackRequestProcessException("Invalid beacon payment item");
+			}
+
+			//the beacon payment action itself completes the transaction by consuming one input item
+			$payment->setCount($payment->getCount() - 1);
+			$window->setItem(BeaconInventory::SLOT_PAYMENT, $payment->getCount() > 0 ? $payment : VanillaItems::AIR());
+			$tile->setPrimaryEffect($primary);
+			$tile->setSecondaryEffect($secondary);
+			$world->setBlock($position, $block); //resend the updated powers to viewers
 		}else{
 			throw new ItemStackRequestProcessException("Unhandled item stack request action");
 		}

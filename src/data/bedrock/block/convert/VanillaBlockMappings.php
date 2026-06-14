@@ -42,6 +42,7 @@ use pocketmine\block\CaveVines;
 use pocketmine\block\ChiseledBookshelf;
 use pocketmine\block\ChorusFlower;
 use pocketmine\block\CocoaBlock;
+use pocketmine\block\Composter;
 use pocketmine\block\Copper;
 use pocketmine\block\CopperLantern;
 use pocketmine\block\DaylightSensor;
@@ -64,6 +65,7 @@ use pocketmine\block\Leaves;
 use pocketmine\block\Lectern;
 use pocketmine\block\Lever;
 use pocketmine\block\Light;
+use pocketmine\block\LightningRod;
 use pocketmine\block\MobHead;
 use pocketmine\block\Dispenser;
 use pocketmine\block\Dropper;
@@ -525,6 +527,10 @@ final class VanillaBlockMappings{
 		$reg->mapModel(Model::create(Blocks::CANDLE(), Ids::CANDLE)->properties($candleProperties));
 		$reg->mapModel(Model::create(Blocks::CAKE_WITH_CANDLE(), Ids::CANDLE_CAKE)->properties($cakeWithCandleProperties));
 
+		$reg->mapModel(Model::create(Blocks::COMPOSTER(), Ids::COMPOSTER)->properties([
+			new IntProperty(StateNames::COMPOSTER_FILL_LEVEL, 0, 8, fn(Composter $b) => $b->getFillLevel(), fn(Composter $b, int $v) => $b->setFillLevel($v))
+		]));
+
 		$reg->mapFlattenedId(FlattenedIdModel::create(Blocks::DYED_CANDLE())
 			->idComponents([
 				"minecraft:",
@@ -710,7 +716,7 @@ final class VanillaBlockMappings{
 			->idComponents([...$commonProperties->copperIdPrefixes, "lightning_rod"])
 			->properties([
 				$commonProperties->anyFacingClassic,
-				new DummyProperty(StateNames::POWERED_BIT, false) //TODO
+				new BoolProperty(StateNames::POWERED_BIT, fn(LightningRod $b) => $b->isPowered(), fn(LightningRod $b, bool $v) => $b->setPowered($v))
 			])
 		);
 	}

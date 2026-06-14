@@ -29,6 +29,7 @@ namespace pocketmine\world;
 use pocketmine\block\Air;
 use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
+use pocketmine\block\LightningRod;
 use pocketmine\block\RuntimeBlockStateRegistry;
 use pocketmine\block\tile\Spawnable;
 use pocketmine\block\tile\Tile;
@@ -1126,6 +1127,13 @@ class World implements ChunkManager{
 	 * Spawns a lightning bolt at the given position, damaging nearby entities and optionally creating fire.
 	 */
 	public function strikeLightning(Vector3 $pos, bool $createFire = true) : LightningBolt{
+		$rod = LightningRod::findStruckRod($this, $pos);
+		if($rod !== null){
+			//a nearby lightning rod intercepts the strike: redirect the bolt to it, energise it, and ground the fire
+			$pos = $rod->getPosition()->add(0.5, 0, 0.5);
+			$rod->onStruckByLightning();
+			$createFire = false;
+		}
 		$lightning = new LightningBolt(Location::fromObject($pos, $this));
 		$lightning->setCreatesFire($createFire && $this->gameRules->getBool(GameRule::DO_FIRE_TICK));
 		$lightning->spawnToAll();
