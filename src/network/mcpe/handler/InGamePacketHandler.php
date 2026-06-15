@@ -218,6 +218,7 @@ class InGamePacketHandler extends PacketHandler{
 		}
 
 		$inputFlags = $packet->getInputFlags();
+		$dismounted = false;
 		if($this->lastPlayerAuthInputFlags === null || !$inputFlags->equals($this->lastPlayerAuthInputFlags)){
 			$this->lastPlayerAuthInputFlags = $inputFlags;
 
@@ -244,6 +245,8 @@ class InGamePacketHandler extends PacketHandler{
 			if($inputFlags->get(PlayerAuthInputFlags::START_SNEAKING)){
 				//sneaking is how you climb out of a boat/vehicle
 				Rideable::dismountFrom($this->player);
+				$dismounted = true;
+				$this->lastPlayerAuthInputPosition = $rawPos;
 			}
 			if($inputFlags->get(PlayerAuthInputFlags::MISSED_SWING)){
 				$this->player->missSwing();
@@ -252,11 +255,17 @@ class InGamePacketHandler extends PacketHandler{
 
 		$vehicleInfo = $packet->getVehicleInfo();
 		if($vehicleInfo !== null && ($vehicle = $this->player->getWorld()->getEntity($vehicleInfo->getPredictedVehicleActorUniqueId())) instanceof Boat && $vehicle->handleVehicleInput($this->player, $packet)){
-			//the player is steering a boat: feed the input to the boat instead of moving the player directly
+			//the player is steering a boat: feed the input to the boat, AND re-centre the rider on it via followVehicle (NOT
+			//handleMovement - a seated rider must not fire PlayerMoveEvent every tick nor spend the move-rate-limit) so chunk
+			//loading/ticking, viewers and sneak-to-dismount track the boat as it moves instead of the boarding point
 			$this->lastPlayerAuthInputPosition = $rawPos;
-		}elseif(!$this->forceMoveSync && $hasMoved){
+			if(!$this->forceMoveSync && $hasMoved){
+				$this->player->followVehicle($newPos);
+			}
+		}elseif(!$dismounted && !$this->forceMoveSync && $hasMoved){
 			$this->lastPlayerAuthInputPosition = $rawPos;
 			//TODO: this packet has WAYYYYY more useful information that we're not using
+			//(skipped on the tick we dismounted, so syncDismountedPlayer's side-of-boat position isn't clobbered by the seat)
 			$this->player->handleMovement($newPos);
 		}
 

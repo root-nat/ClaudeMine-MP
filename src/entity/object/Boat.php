@@ -23,8 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\entity\object;
 
-use pocketmine\block\Liquid;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\block\Water;
 use pocketmine\entity\Attribute;
 use pocketmine\entity\EntitySizeInfo;
 use pocketmine\entity\Rideable;
@@ -40,25 +40,43 @@ use pocketmine\network\mcpe\protocol\types\entity\Attribute as NetworkAttribute;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\network\mcpe\protocol\types\entity\EntityLink;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
+use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
 use pocketmine\network\mcpe\protocol\types\entity\PropertySyncData;
 use pocketmine\player\Player;
 use pocketmine\world\sound\BlockBreakSound;
+use function abs;
 use function array_filter;
 use function array_map;
 use function array_values;
+use function cos;
+use function deg2rad;
+use function floor;
+use function max;
+use function min;
+use function sin;
+use const INF;
 
 class Boat extends Rideable{
 
 	private const TAG_WOOD_TYPE = "PMMPBoatWoodType";
-	/**
-	 * Vertical speed the hull is FORCED to while its base block is water. A direct override (not an additive nudge) so it
-	 * always beats whatever downward speed gravity built up - the collision-less ridden hull would otherwise reach
-	 * terminal velocity and sink straight through the water, which a gentle additive push could never reverse.
-	 */
-	private const FLOAT_RISE = 0.1;
+	/** Per-tick paddle speed in/out of water - the rider's input is turned into motion at this rate (RootMine values). */
+	private const WATER_SPEED = 0.18;
+	private const LAND_SPEED = 0.08;
+	/** How far the input must deviate from neutral before it counts as steering (deadzone for analog sticks). */
+	private const INPUT_DEADZONE = 0.01;
+	/** Reference height above the hull's base used to measure distance to the water surface (RootMine value). */
+	private const BASE_OFFSET = 0.375;
+	/** Water-surface band and settle speeds for an EMPTY boat's server-side buoyancy (RootMine values). */
+	private const SINKING_DEPTH = 0.07;
+	private const SINKING_SPEED = 0.0005;
+	private const SINKING_MAX_SPEED = 0.005;
 
 	protected int $woodType = 0;
+	/** Hysteresis flag for the empty-boat settle so it doesn't oscillate across the surface band. */
+	protected bool $sinking = false;
+	protected float $paddleTimeLeft = 0.0;
+	protected float $paddleTimeRight = 0.0;
 
 	public static function getNetworkTypeId() : string{ return EntityIds::BOAT; }
 
@@ -103,9 +121,11 @@ class Boat extends Rideable{
 	}
 
 	/**
-	 * Steers the boat from its rider's authoritative input: the client drives the boat locally (so it floats correctly
-	 * and never sinks), and reports its position through the rider's movement, which we copy onto the server-side boat so
-	 * other players, collision and dismounting track it. Called by the network handler for the controlling player.
+	 * Steers the boat from its rider's authoritative input, the server-driven model used by RootMine-MP: the rider's body
+	 * yaw becomes the hull heading and the raw WASD/stick vector (moveVecZ forward, moveVecX strafe) is rotated by that
+	 * yaw into horizontal motion, faster on water than land. The vertical axis is left to buoyancy (entityBaseTick) so the
+	 * hull never leaves the waterline. The actual position change happens through the normal move() in onUpdate; we only
+	 * set the motion here. Called by the network handler for the controlling player each input tick.
 	 */
 	public function handleVehicleInput(Player $player, PlayerAuthInputPacket $packet) : bool{
 		if($this->rider !== $player){
@@ -116,15 +136,54 @@ class Boat extends Rideable{
 			return false;
 		}
 
-		//steer in the horizontal plane only: copy the rider's reported X/Z, but leave Y to buoyancy (entityBaseTick) so the
-		//hull stays pinned to the waterline. Feeding the rider's eye-height Y back in here is what dragged the boat under.
-		$reported = $packet->getPosition();
-		$target = new Vector3($reported->x, $this->location->y, $reported->z);
-		if($target->distanceSquared($this->location->asVector3()) <= 100.0){
-			$this->setPositionAndRotation($target, $packet->getYaw(), 0.0);
-			$this->updateMovement();
+		$yaw = $packet->getYaw();
+		$this->setRotation($yaw, 0.0);
+
+		$forward = $packet->getMoveVecZ();
+		$strafe = $packet->getMoveVecX();
+		if(abs($forward) > self::INPUT_DEADZONE || abs($strafe) > self::INPUT_DEADZONE){
+			$speed = $this->getWaterLevel() !== INF ? self::WATER_SPEED : self::LAND_SPEED;
+			$rad = deg2rad($yaw);
+			//rotate the input vector into world space. Y is forced to 0: while ridden the client owns the vertical axis
+			//(IS_BUOYANT), so the server must not feed it any vertical motion or it fights the client's bob/wave prediction
+			$this->motion = $this->motion->withComponents(
+				(-sin($rad) * $forward + cos($rad) * $strafe) * $speed,
+				0.0,
+				(cos($rad) * $forward + sin($rad) * $strafe) * $speed
+			);
+			$this->paddle();
+		}else{
+			//no input: bleed off the drift so the boat coasts to a stop instead of sliding forever (collision is off)
+			$this->motion = $this->motion->withComponents($this->motion->x * 0.4, 0.0, $this->motion->z * 0.4);
 		}
+		$this->scheduleUpdate();
 		return true;
+	}
+
+	/**
+	 * Signed distance from the hull's reference height down to the nearest water surface touching its bounding box, ported
+	 * from RootMine. Negative = submerged (should rise), positive = riding above the surface, INF = no water in the hull
+	 * volume (treated as on land). Sampling the whole hull volume - not just the single origin block - keeps the water/land
+	 * decision stable as the boat bobs, so paddle speed and buoyancy don't flicker at the waterline. Shared by buoyancy and
+	 * steering.
+	 */
+	private function getWaterLevel() : float{
+		$maxY = $this->boundingBox->minY + self::BASE_OFFSET;
+		$diffY = INF;
+		foreach($this->getBlocksAroundWithEntityInsideActions() as $block){
+			if($block instanceof Water){
+				$level = ($block->getPosition()->getY() + 1) - ($block->getFluidHeightPercent() - 0.1111111);
+				$diffY = min($maxY - $level, $diffY);
+			}
+		}
+		return $diffY;
+	}
+
+	/** Advances the oar animation timers the Bedrock client reads to swing the paddles while rowing. */
+	private function paddle() : void{
+		$this->paddleTimeLeft += 0.2;
+		$this->paddleTimeRight += 0.2;
+		$this->networkPropertiesDirty = true;
 	}
 
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
@@ -141,16 +200,44 @@ class Boat extends Rideable{
 			$this->dismountPassenger();
 		}
 
-		//buoyancy, applied whether or not someone is riding: while the hull's own block is water, FORCE an upward speed so
-		//it rises to and bobs at the surface. Direct (not additive) so it reverses any gravity-built sink - this is what
-		//keeps a ridden, collision-less boat from sinking straight through the water.
-		$pos = $this->location;
-		if($this->getWorld()->getBlockAt($pos->getFloorX(), $pos->getFloorY(), $pos->getFloorZ()) instanceof Liquid){
-			$this->motion = $this->motion->withComponents($this->motion->x * 0.9, self::FLOAT_RISE, $this->motion->z * 0.9);
-			$hasUpdate = true;
-		}
-
+		//vertical motion is no longer handled here: while ridden the client floats the boat (IS_BUOYANT), and while empty
+		//tryChangeMovement runs the server-side water-level settle. Mixing a server push in here is what fought the client.
 		return $hasUpdate;
+	}
+
+	/**
+	 * While RIDDEN, do nothing: the client owns ALL of the boat's physics - WASD_CONTROLLED for steering and IS_BUOYANT for
+	 * the vertical bob/waves. The server must only apply the input motion set in handleVehicleInput and never add its own
+	 * gravity/friction/buoyancy, or it fights the client's prediction (the jerky steering + dismount snap-back). While EMPTY
+	 * (no client predicting it) run RootMine's server-side water-level settle so a loose boat drifts to and rests on the
+	 * surface, and falls under gravity on land.
+	 */
+	protected function tryChangeMovement() : void{
+		if($this->rider !== null){
+			return;
+		}
+		$mY = $this->motion->y;
+		$waterDiff = $this->getWaterLevel();
+		if($waterDiff > self::SINKING_DEPTH && !$this->sinking){
+			$this->sinking = true;
+		}elseif($waterDiff < -self::SINKING_DEPTH && $this->sinking){
+			$this->sinking = false;
+		}
+		if($waterDiff < -self::SINKING_DEPTH){
+			$mY = min(0.05, $mY + 0.005);
+		}elseif($waterDiff < 0 || !$this->sinking){
+			$mY = $mY > self::SINKING_MAX_SPEED ? max($mY - 0.02, self::SINKING_MAX_SPEED) : $mY + self::SINKING_SPEED;
+		}
+		//self-eject if the hull ends up embedded in a solid block (no-op when floating in water/air); RootMine parity
+		$this->checkObstruction($this->location->x, $this->location->y, $this->location->z);
+		if($waterDiff > self::SINKING_DEPTH || $this->sinking){
+			$mY = $waterDiff > 0.5 ? $mY - $this->gravity : ($mY - self::SINKING_SPEED < -self::SINKING_MAX_SPEED ? $mY : $mY - self::SINKING_SPEED);
+		}
+		$friction = 1 - $this->drag;
+		if($this->onGround){
+			$friction *= $this->getWorld()->getBlockAt((int) floor($this->location->x), (int) floor($this->location->y - 1), (int) floor($this->location->z))->getFrictionFactor();
+		}
+		$this->motion = $this->motion->withComponents($this->motion->x * $friction, $mY, $this->motion->z * $friction);
 	}
 
 	public function attack(EntityDamageEvent $source) : void{
@@ -191,6 +278,19 @@ class Boat extends Rideable{
 	protected function syncNetworkData(EntityMetadataCollection $properties) : void{
 		parent::syncNetworkData($properties);
 		$properties->setInt(EntityMetadataProperties::VARIANT, $this->woodType);
+		$properties->setFloat(EntityMetadataProperties::PADDLE_TIME_LEFT, $this->paddleTimeLeft);
+		$properties->setFloat(EntityMetadataProperties::PADDLE_TIME_RIGHT, $this->paddleTimeRight);
+		//the full Bedrock "player-steered, self-floating vehicle" profile, matching vanilla/RootMine. The client predicts
+		//BOTH the WASD steering (WASD_CONTROLLED) AND the vertical bob/waves (IS_BUOYANT + BUOYANCY_DATA, with gravity
+		//handled inside the buoyancy sim so the generic AFFECTED_BY_GRAVITY flag is off). Sending only WASD_CONTROLLED left
+		//the client half-predicting and fighting the server - the jerky steering and the dismount snap-back. With the full
+		//set the client owns the physics and the server only feeds input motion (see tryChangeMovement / handleVehicleInput).
+		$properties->setGenericFlag(EntityMetadataFlags::WASD_CONTROLLED, true);
+		$properties->setGenericFlag(EntityMetadataFlags::HAS_COLLISION, true);
+		$properties->setGenericFlag(EntityMetadataFlags::AFFECTED_BY_GRAVITY, false);
+		$properties->setByte(EntityMetadataProperties::CONTROLLING_RIDER_SEAT_NUMBER, 0);
+		$properties->setByte(EntityMetadataProperties::IS_BUOYANT, 1);
+		$properties->setString(EntityMetadataProperties::BUOYANCY_DATA, '{"apply_gravity":true,"base_buoyancy":1.0,"big_wave_probability":0.03,"big_wave_speed":10.0,"drag_down_on_buoyancy_removed":0.0,"liquid_blocks":["minecraft:water","minecraft:flowing_water"],"simulate_waves":true}');
 	}
 
 	protected function sendSpawnPacket(Player $player) : void{

@@ -73,7 +73,7 @@ final class NaturalSpawner{
 	 *
 	 * @return array{int, Block}|null
 	 */
-	private static function findSpawnSurface(World $world, int $x, int $z) : ?array{
+	public static function findSpawnSurface(World $world, int $x, int $z) : ?array{
 		$top = $world->getHighestBlockAt($x, $z);
 		if($top === null){
 			return null;

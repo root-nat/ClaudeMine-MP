@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
+use pocketmine\block\BlockTypeIds;
 use pocketmine\item\ItemTypeIds;
 use function in_array;
 
@@ -40,6 +41,7 @@ final class BreedingHelper{
 	public const OCELOT = "ocelot";
 	public const RABBIT = "rabbit";
 	public const FOX = "fox";
+	public const HOGLIN = "hoglin";
 
 	/** How long an animal stays ready to breed after being fed (30s). */
 	public const IN_LOVE_TICKS = 600;
@@ -65,6 +67,7 @@ final class BreedingHelper{
 			self::OCELOT => [ItemTypeIds::RAW_FISH, ItemTypeIds::RAW_SALMON],
 			self::RABBIT => [ItemTypeIds::CARROT, ItemTypeIds::GOLDEN_CARROT],
 			self::FOX => [ItemTypeIds::SWEET_BERRIES],
+			self::HOGLIN => [ItemTypeIds::fromBlockTypeId(BlockTypeIds::CRIMSON_FUNGUS)],
 			default => []
 		};
 	}

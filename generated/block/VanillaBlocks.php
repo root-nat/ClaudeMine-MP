@@ -199,6 +199,7 @@ final class VanillaBlocks{
 	private static Wall $_mCOBBLESTONE_WALL;
 	private static Cobweb $_mCOBWEB;
 	private static CocoaBlock $_mCOCOA_POD;
+	private static Composter $_mCOMPOSTER;
 	private static ChemistryTable $_mCOMPOUND_CREATOR;
 	private static Concrete $_mCONCRETE;
 	private static ConcretePowder $_mCONCRETE_POWDER;
@@ -473,6 +474,7 @@ final class VanillaBlocks{
 	private static HardenedGlassPane $_mHARDENED_GLASS_PANE;
 	private static HayBale $_mHAY_BALE;
 	private static Opaque $_mHONEYCOMB;
+	private static HoneyBlock $_mHONEY_BLOCK;
 	private static Hopper $_mHOPPER;
 	private static Ice $_mICE;
 	private static InfestedStone $_mINFESTED_CHISELED_STONE_BRICK;
@@ -560,6 +562,7 @@ final class VanillaBlocks{
 	private static Slab $_mMOSSY_STONE_BRICK_SLAB;
 	private static Stair $_mMOSSY_STONE_BRICK_STAIRS;
 	private static Wall $_mMOSSY_STONE_BRICK_WALL;
+	private static MovingBlock $_mMOVING_BLOCK;
 	private static Opaque $_mMUD;
 	private static SimplePillar $_mMUDDY_MANGROVE_ROOTS;
 	private static Opaque $_mMUD_BRICKS;
@@ -725,6 +728,7 @@ final class VanillaBlocks{
 	private static Stair $_mSANDSTONE_STAIRS;
 	private static Wall $_mSANDSTONE_WALL;
 	private static Sculk $_mSCULK;
+	private static SculkSensor $_mSCULK_SENSOR;
 	private static SeaLantern $_mSEA_LANTERN;
 	private static SeaPickle $_mSEA_PICKLE;
 	private static Opaque $_mSHROOMLIGHT;
@@ -1041,6 +1045,7 @@ final class VanillaBlocks{
 			"cobblestone_wall" => fn(Wall $v) => self::$_mCOBBLESTONE_WALL = $v,
 			"cobweb" => fn(Cobweb $v) => self::$_mCOBWEB = $v,
 			"cocoa_pod" => fn(CocoaBlock $v) => self::$_mCOCOA_POD = $v,
+			"composter" => fn(Composter $v) => self::$_mCOMPOSTER = $v,
 			"compound_creator" => fn(ChemistryTable $v) => self::$_mCOMPOUND_CREATOR = $v,
 			"concrete" => fn(Concrete $v) => self::$_mCONCRETE = $v,
 			"concrete_powder" => fn(ConcretePowder $v) => self::$_mCONCRETE_POWDER = $v,
@@ -1315,6 +1320,7 @@ final class VanillaBlocks{
 			"hardened_glass_pane" => fn(HardenedGlassPane $v) => self::$_mHARDENED_GLASS_PANE = $v,
 			"hay_bale" => fn(HayBale $v) => self::$_mHAY_BALE = $v,
 			"honeycomb" => fn(Opaque $v) => self::$_mHONEYCOMB = $v,
+			"honey_block" => fn(HoneyBlock $v) => self::$_mHONEY_BLOCK = $v,
 			"hopper" => fn(Hopper $v) => self::$_mHOPPER = $v,
 			"ice" => fn(Ice $v) => self::$_mICE = $v,
 			"infested_chiseled_stone_brick" => fn(InfestedStone $v) => self::$_mINFESTED_CHISELED_STONE_BRICK = $v,
@@ -1402,6 +1408,7 @@ final class VanillaBlocks{
 			"mossy_stone_brick_slab" => fn(Slab $v) => self::$_mMOSSY_STONE_BRICK_SLAB = $v,
 			"mossy_stone_brick_stairs" => fn(Stair $v) => self::$_mMOSSY_STONE_BRICK_STAIRS = $v,
 			"mossy_stone_brick_wall" => fn(Wall $v) => self::$_mMOSSY_STONE_BRICK_WALL = $v,
+			"moving_block" => fn(MovingBlock $v) => self::$_mMOVING_BLOCK = $v,
 			"mud" => fn(Opaque $v) => self::$_mMUD = $v,
 			"muddy_mangrove_roots" => fn(SimplePillar $v) => self::$_mMUDDY_MANGROVE_ROOTS = $v,
 			"mud_bricks" => fn(Opaque $v) => self::$_mMUD_BRICKS = $v,
@@ -1567,6 +1574,7 @@ final class VanillaBlocks{
 			"sandstone_stairs" => fn(Stair $v) => self::$_mSANDSTONE_STAIRS = $v,
 			"sandstone_wall" => fn(Wall $v) => self::$_mSANDSTONE_WALL = $v,
 			"sculk" => fn(Sculk $v) => self::$_mSCULK = $v,
+			"sculk_sensor" => fn(SculkSensor $v) => self::$_mSCULK_SENSOR = $v,
 			"sea_lantern" => fn(SeaLantern $v) => self::$_mSEA_LANTERN = $v,
 			"sea_pickle" => fn(SeaPickle $v) => self::$_mSEA_PICKLE = $v,
 			"shroomlight" => fn(Opaque $v) => self::$_mSHROOMLIGHT = $v,
@@ -2529,6 +2537,11 @@ final class VanillaBlocks{
 	public static function COCOA_POD() : CocoaBlock{
 		if(!isset(self::$_mCOCOA_POD)){ self::init(); }
 		return clone self::$_mCOCOA_POD;
+	}
+
+	public static function COMPOSTER() : Composter{
+		if(!isset(self::$_mCOMPOSTER)){ self::init(); }
+		return clone self::$_mCOMPOSTER;
 	}
 
 	public static function COMPOUND_CREATOR() : ChemistryTable{
@@ -3901,6 +3914,11 @@ final class VanillaBlocks{
 		return clone self::$_mHONEYCOMB;
 	}
 
+	public static function HONEY_BLOCK() : HoneyBlock{
+		if(!isset(self::$_mHONEY_BLOCK)){ self::init(); }
+		return clone self::$_mHONEY_BLOCK;
+	}
+
 	public static function HOPPER() : Hopper{
 		if(!isset(self::$_mHOPPER)){ self::init(); }
 		return clone self::$_mHOPPER;
@@ -4334,6 +4352,11 @@ final class VanillaBlocks{
 	public static function MOSSY_STONE_BRICK_WALL() : Wall{
 		if(!isset(self::$_mMOSSY_STONE_BRICK_WALL)){ self::init(); }
 		return clone self::$_mMOSSY_STONE_BRICK_WALL;
+	}
+
+	public static function MOVING_BLOCK() : MovingBlock{
+		if(!isset(self::$_mMOVING_BLOCK)){ self::init(); }
+		return clone self::$_mMOVING_BLOCK;
 	}
 
 	public static function MUD() : Opaque{
@@ -5159,6 +5182,11 @@ final class VanillaBlocks{
 	public static function SCULK() : Sculk{
 		if(!isset(self::$_mSCULK)){ self::init(); }
 		return clone self::$_mSCULK;
+	}
+
+	public static function SCULK_SENSOR() : SculkSensor{
+		if(!isset(self::$_mSCULK_SENSOR)){ self::init(); }
+		return clone self::$_mSCULK_SENSOR;
 	}
 
 	public static function SEA_LANTERN() : SeaLantern{

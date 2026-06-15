@@ -37,6 +37,9 @@ use function mt_rand;
  */
 abstract class Monster extends AbstractMob{
 
+	/** Set for mobs that must never be culled by the distance despawn (e.g. raid members), independent of any name tag. */
+	private bool $persistent = false;
+
 	protected function registerBehaviour() : void{
 		$this->addSensor(new NearestPlayersSensor($this->getFollowRange()));
 		$this->addSensor(new HurtBySensor());
@@ -51,10 +54,17 @@ abstract class Monster extends AbstractMob{
 	abstract protected function registerAttackGoals() : void;
 
 	/**
-	 * Persistent monsters (e.g. named ones) never despawn.
+	 * Persistent monsters (named ones, or those explicitly pinned like raid members) never despawn.
 	 */
 	public function isPersistent() : bool{
-		return $this->getNameTag() !== "";
+		return $this->persistent || $this->getNameTag() !== "";
+	}
+
+	/**
+	 * Pins this monster against the distance despawn without giving it a name tag (used for raid members).
+	 */
+	public function setPersistent(bool $persistent = true) : void{
+		$this->persistent = $persistent;
 	}
 
 	/**

@@ -1622,6 +1622,15 @@ final class StringToItemParser extends StringToTParser{
 		$result->register("rabbit_spawn_egg", fn() => Items::RABBIT_SPAWN_EGG());
 		$result->register("fox_spawn_egg", fn() => Items::FOX_SPAWN_EGG());
 		$result->register("drowned_spawn_egg", fn() => Items::DROWNED_SPAWN_EGG());
+		$result->register("pillager_spawn_egg", fn() => Items::PILLAGER_SPAWN_EGG());
+		$result->register("vindicator_spawn_egg", fn() => Items::VINDICATOR_SPAWN_EGG());
+		$result->register("witch_spawn_egg", fn() => Items::WITCH_SPAWN_EGG());
+		$result->register("ravager_spawn_egg", fn() => Items::RAVAGER_SPAWN_EGG());
+		$result->register("evoker_spawn_egg", fn() => Items::EVOKER_SPAWN_EGG());
+		$result->register("hoglin_spawn_egg", fn() => Items::HOGLIN_SPAWN_EGG());
+		$result->register("zoglin_spawn_egg", fn() => Items::ZOGLIN_SPAWN_EGG());
+		$result->register("zombie_pigman_spawn_egg", fn() => Items::ZOMBIE_PIGMAN_SPAWN_EGG());
+		$result->register("piglin_spawn_egg", fn() => Items::PIGLIN_SPAWN_EGG());
 		$result->register("blaze_spawn_egg", fn() => Items::BLAZE_SPAWN_EGG());
 		$result->register("ghast_spawn_egg", fn() => Items::GHAST_SPAWN_EGG());
 		$result->register("steak", fn() => Items::STEAK());

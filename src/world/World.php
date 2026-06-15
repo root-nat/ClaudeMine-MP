@@ -31,6 +31,7 @@ use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\block\LightningRod;
 use pocketmine\entity\NaturalSpawner;
+use pocketmine\entity\PatrolSpawner;
 use pocketmine\block\RuntimeBlockStateRegistry;
 use pocketmine\block\tile\Spawnable;
 use pocketmine\block\tile\Tile;
@@ -112,6 +113,7 @@ use pocketmine\world\particle\BlockBreakParticle;
 use pocketmine\world\particle\Particle;
 use pocketmine\world\sound\BlockPlaceSound;
 use pocketmine\world\sound\Sound;
+use pocketmine\world\raid\RaidManager;
 use pocketmine\world\utils\SubChunkExplorer;
 use pocketmine\world\weather\WeatherManager;
 use pocketmine\YmlServerProperties;
@@ -489,6 +491,7 @@ class World implements ChunkManager{
 	 */
 	private Dimension $dimension;
 	private WeatherManager $weather;
+	private RaidManager $raids;
 	private GameRules $gameRules;
 
 	public function __construct(
@@ -554,6 +557,7 @@ class World implements ChunkManager{
 		$this->gameRules = new GameRules($worldData->getGameRules());
 		$this->weather = new WeatherManager($this);
 		$this->weather->readSaveData($worldData);
+		$this->raids = new RaidManager($this);
 
 		$cfg = $this->server->getConfigGroup();
 		$this->chunkTickRadius = min($this->server->getViewDistance(), max(0, $cfg->getPropertyInt(YmlServerProperties::CHUNK_TICKING_TICK_RADIUS, 4)));
@@ -618,6 +622,10 @@ class World implements ChunkManager{
 
 	public function getWeather() : WeatherManager{
 		return $this->weather;
+	}
+
+	public function getRaidManager() : RaidManager{
+		return $this->raids;
 	}
 
 	public function getGameRules() : GameRules{
@@ -978,6 +986,8 @@ class World implements ChunkManager{
 		if($this->dimension->hasWeather()){
 			$this->weather->tick();
 		}
+
+		$this->raids->tick();
 
 		if(++$this->sendTimeTicker === 200){
 			$this->sendTime();
@@ -1460,6 +1470,11 @@ class World implements ChunkManager{
 		//natural mob spawning: attempted at a low rate per ticking chunk (already near players), bounded by population caps
 		if($this->gameRules->getBool(GameRule::DO_MOB_SPAWNING) && mt_rand(0, 1499) === 0){
 			NaturalSpawner::attempt($this, $chunkX, $chunkZ);
+		}
+
+		//much rarer: an illager patrol led by a banner captain whose death grants Bad Omen (the seed of a raid)
+		if($this->gameRules->getBool(GameRule::DO_MOB_SPAWNING) && mt_rand(0, 14999) === 0){
+			PatrolSpawner::attempt($this, $chunkX, $chunkZ);
 		}
 
 		$tickedBlocksPerSubchunk = $this->tickedBlocksPerSubchunkPerTick * $this->gameRules->getInt(GameRule::RANDOM_TICK_SPEED);

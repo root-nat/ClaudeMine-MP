@@ -430,6 +430,15 @@ final class ItemSerializerDeserializerRegistrar{
 		$this->map1to1Item(Ids::RABBIT_SPAWN_EGG, Items::RABBIT_SPAWN_EGG());
 		$this->map1to1Item(Ids::FOX_SPAWN_EGG, Items::FOX_SPAWN_EGG());
 		$this->map1to1Item(Ids::DROWNED_SPAWN_EGG, Items::DROWNED_SPAWN_EGG());
+		$this->map1to1Item(Ids::PILLAGER_SPAWN_EGG, Items::PILLAGER_SPAWN_EGG());
+		$this->map1to1Item(Ids::VINDICATOR_SPAWN_EGG, Items::VINDICATOR_SPAWN_EGG());
+		$this->map1to1Item(Ids::WITCH_SPAWN_EGG, Items::WITCH_SPAWN_EGG());
+		$this->map1to1Item(Ids::RAVAGER_SPAWN_EGG, Items::RAVAGER_SPAWN_EGG());
+		$this->map1to1Item(Ids::EVOKER_SPAWN_EGG, Items::EVOKER_SPAWN_EGG());
+		$this->map1to1Item(Ids::HOGLIN_SPAWN_EGG, Items::HOGLIN_SPAWN_EGG());
+		$this->map1to1Item(Ids::ZOGLIN_SPAWN_EGG, Items::ZOGLIN_SPAWN_EGG());
+		$this->map1to1Item(Ids::ZOMBIE_PIGMAN_SPAWN_EGG, Items::ZOMBIE_PIGMAN_SPAWN_EGG());
+		$this->map1to1Item(Ids::PIGLIN_SPAWN_EGG, Items::PIGLIN_SPAWN_EGG());
 		$this->map1to1Item(Ids::BLAZE_SPAWN_EGG, Items::BLAZE_SPAWN_EGG());
 		$this->map1to1Item(Ids::GHAST_SPAWN_EGG, Items::GHAST_SPAWN_EGG());
 		$this->map1to1Item(Ids::STICK, Items::STICK());

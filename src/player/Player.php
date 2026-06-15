@@ -1374,6 +1374,26 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		}
 	}
 
+	/**
+	 * Re-centres a riding player on the vehicle they are steering WITHOUT running the normal movement pipeline. The rider's
+	 * client predicts the vehicle locally, so we must not feed this through {@link handleMovement}: that would fire a
+	 * PlayerMoveEvent every tick (letting region/anti-cheat plugins cancel it and hard-reset the seated rider), spend the
+	 * move-rate-limit budget, and risk a correction packet. Instead we just move the server-side position so chunk loading,
+	 * entity ticking, viewer tracking and sneak-to-dismount stay centred on the moving vehicle. The rider's visible
+	 * position is driven by the entity link to the vehicle, not by a movement broadcast - so we also suppress the
+	 * per-tick PlayerMoveEvent by keeping {@link $lastLocation} in sync.
+	 */
+	public function followVehicle(Vector3 $pos) : void{
+		if(!$this->spawned || !$this->isAlive() || $this->location->equals($pos)){
+			return;
+		}
+		$this->setPosition($pos);
+		$this->lastLocation = $this->location->asLocation();
+		if($this->nextChunkOrderRun > 20){
+			$this->nextChunkOrderRun = 20;
+		}
+	}
+
 	private function actuallyHandleMovement(Vector3 $newPos) : void{
 		$this->moveRateLimit--;
 		if($this->moveRateLimit < 0){

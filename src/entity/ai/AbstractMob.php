@@ -123,9 +123,23 @@ abstract class AbstractMob extends Living implements MobContext{
 		}
 
 		$this->targetSelector->selectTarget($this);
-		$this->goalSelector->tick($this);
+		if($this->isMovementFrozen()){
+			//a frozen mob (e.g. a piglin admiring a bartered ingot) holds its ground: skip its movement/attack goals and
+			//damp any residual horizontal drift so it stops on the spot, keeping vertical motion for gravity
+			$this->motion = $this->motion->withComponents(0.0, $this->motion->y, 0.0);
+		}else{
+			$this->goalSelector->tick($this);
+		}
 
 		return true;
+	}
+
+	/**
+	 * Whether this mob should hold still this tick, ignoring its movement/attack goals (e.g. a piglin admiring a bartered
+	 * gold ingot). Override per species; defaults to never frozen.
+	 */
+	protected function isMovementFrozen() : bool{
+		return false;
 	}
 
 	public function getFollowRange() : float{

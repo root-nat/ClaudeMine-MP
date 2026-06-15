@@ -49,10 +49,19 @@ use pocketmine\entity\Slime;
 use pocketmine\entity\Spider;
 use pocketmine\entity\Squid;
 use pocketmine\entity\Stray;
+use pocketmine\entity\Evoker;
+use pocketmine\entity\Hoglin;
+use pocketmine\entity\Piglin;
+use pocketmine\entity\Pillager;
+use pocketmine\entity\Ravager;
 use pocketmine\entity\Villager;
+use pocketmine\entity\Vindicator;
+use pocketmine\entity\Witch;
 use pocketmine\entity\WitherSkeleton;
 use pocketmine\entity\Wolf;
+use pocketmine\entity\Zoglin;
 use pocketmine\entity\Zombie;
+use pocketmine\entity\ZombifiedPiglin;
 use pocketmine\inventory\ArmorInventory;
 use pocketmine\item\enchantment\ItemEnchantmentTags as EnchantmentTags;
 use pocketmine\item\ItemIdentifier as IID;
@@ -424,6 +433,51 @@ final class VanillaItemsInputs extends RegistrySource{
 		self::register("magma_cube_spawn_egg", fn(IID $id) => new class($id, "Magma Cube Spawn Egg") extends SpawnEgg{
 			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
 				return new MagmaCube(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("pillager_spawn_egg", fn(IID $id) => new class($id, "Pillager Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Pillager(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("vindicator_spawn_egg", fn(IID $id) => new class($id, "Vindicator Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Vindicator(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("witch_spawn_egg", fn(IID $id) => new class($id, "Witch Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Witch(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("ravager_spawn_egg", fn(IID $id) => new class($id, "Ravager Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Ravager(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("evoker_spawn_egg", fn(IID $id) => new class($id, "Evoker Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Evoker(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("hoglin_spawn_egg", fn(IID $id) => new class($id, "Hoglin Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Hoglin(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("zoglin_spawn_egg", fn(IID $id) => new class($id, "Zoglin Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Zoglin(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("zombie_pigman_spawn_egg", fn(IID $id) => new class($id, "Zombie Pigman Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new ZombifiedPiglin(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("piglin_spawn_egg", fn(IID $id) => new class($id, "Piglin Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Piglin(Location::fromObject($pos, $world, $yaw, $pitch));
 			}
 		});
 		self::register("husk_spawn_egg", fn(IID $id) => new class($id, "Husk Spawn Egg") extends SpawnEgg{

@@ -35,6 +35,7 @@ use pocketmine\entity\EntityDataHelper as Helper;
 use pocketmine\entity\object\AreaEffectCloud;
 use pocketmine\entity\object\Boat;
 use pocketmine\entity\object\EndCrystal;
+use pocketmine\entity\object\EvokerFangs;
 use pocketmine\entity\object\ExperienceOrb;
 use pocketmine\entity\object\FallingBlock;
 use pocketmine\entity\object\ItemEntity;
@@ -281,6 +282,46 @@ final class EntityFactory{
 		$this->register(MagmaCube::class, function(World $world, CompoundTag $nbt) : MagmaCube{
 			return new MagmaCube(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['LavaSlime', 'MagmaCube', 'minecraft:magma_cube']);
+
+		$this->register(Pillager::class, function(World $world, CompoundTag $nbt) : Pillager{
+			return new Pillager(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Pillager', 'minecraft:pillager']);
+
+		$this->register(Vindicator::class, function(World $world, CompoundTag $nbt) : Vindicator{
+			return new Vindicator(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Vindicator', 'minecraft:vindicator']);
+
+		$this->register(Witch::class, function(World $world, CompoundTag $nbt) : Witch{
+			return new Witch(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Witch', 'minecraft:witch']);
+
+		$this->register(Ravager::class, function(World $world, CompoundTag $nbt) : Ravager{
+			return new Ravager(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Ravager', 'minecraft:ravager']);
+
+		$this->register(Evoker::class, function(World $world, CompoundTag $nbt) : Evoker{
+			return new Evoker(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Evoker', 'EvocationIllager', 'minecraft:evocation_illager']);
+
+		$this->register(EvokerFangs::class, function(World $world, CompoundTag $nbt) : EvokerFangs{
+			return new EvokerFangs(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['EvocationFang', 'minecraft:evocation_fang']);
+
+		$this->register(Hoglin::class, function(World $world, CompoundTag $nbt) : Hoglin{
+			return new Hoglin(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Hoglin', 'minecraft:hoglin']);
+
+		$this->register(Zoglin::class, function(World $world, CompoundTag $nbt) : Zoglin{
+			return new Zoglin(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Zoglin', 'minecraft:zoglin']);
+
+		$this->register(ZombifiedPiglin::class, function(World $world, CompoundTag $nbt) : ZombifiedPiglin{
+			return new ZombifiedPiglin(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['ZombiePigman', 'PigZombie', 'minecraft:zombie_pigman']);
+
+		$this->register(Piglin::class, function(World $world, CompoundTag $nbt) : Piglin{
+			return new Piglin(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Piglin', 'minecraft:piglin']);
 
 		$this->register(Villager::class, function(World $world, CompoundTag $nbt) : Villager{
 			return new Villager(Helper::parseLocation($nbt, $world), $nbt);

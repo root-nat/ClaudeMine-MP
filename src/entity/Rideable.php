@@ -73,6 +73,9 @@ abstract class Rideable extends Entity{
 		if($player !== null){
 			$this->mountPlayer($player, $this->getRiderSeatPosition());
 			$this->setMotion(new Vector3(0.0, 0.0, 0.0));
+			//the vehicle is steered server-side from the rider's input and the client predicts it locally (WASD_CONTROLLED);
+			//move it without block collision so the server hull never sticks on shore/edge blocks the predicting client
+			//drives straight over - that mismatch is what rubber-bands the steering
 			$this->keepMovement = true;
 			$this->broadcastLink($player, EntityLink::TYPE_RIDER, true, true);
 		}
@@ -95,6 +98,7 @@ abstract class Rideable extends Entity{
 			$this->dismountPassenger(false);
 			$this->setRider($passenger);
 		}else{
+			//no one left steering: restore normal collision so an idle/empty boat rests on terrain again
 			$this->keepMovement = false;
 		}
 	}
