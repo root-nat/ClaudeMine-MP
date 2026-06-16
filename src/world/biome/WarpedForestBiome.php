@@ -30,7 +30,16 @@ class WarpedForestBiome extends NetherBiome{
 
 	public function __construct(){
 		parent::__construct();
-		$this->addPopulator(new NetherForestPopulator(VanillaBlocks::WARPED_FUNGUS(), VanillaBlocks::WARPED_ROOTS(), VanillaBlocks::NETHER_SPROUTS(), 28));
+		$this->addPopulator(new NetherForestPopulator(
+			VanillaBlocks::WARPED_FUNGUS(),
+			VanillaBlocks::WARPED_ROOTS(),
+			VanillaBlocks::NETHER_SPROUTS(),
+			28,
+			VanillaBlocks::WARPED_STEM(),
+			VanillaBlocks::WARPED_WART_BLOCK(),
+			false,
+			VanillaBlocks::TWISTING_VINES() //warped forests sprout twisting vines climbing up off the floor
+		));
 	}
 
 	public function getName() : string{

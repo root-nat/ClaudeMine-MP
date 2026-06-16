@@ -23,11 +23,18 @@ declare(strict_types=1);
 
 namespace pocketmine\world\biome;
 
+use pocketmine\world\generator\populator\SoulSandValleyPopulator;
+
 /**
- * A bleak open expanse of soul sand and soul soil. The generator lays the soul-coloured surface; bone fossils and soul
- * fire are not modelled yet.
+ * A bleak open expanse of soul sand and soul soil, lit by patches of blue soul fire and dotted with half-buried bone
+ * fossils, both laid down by {@link SoulSandValleyPopulator}.
  */
 class SoulSandValleyBiome extends NetherBiome{
+
+	public function __construct(){
+		parent::__construct();
+		$this->addPopulator(new SoulSandValleyPopulator());
+	}
 
 	public function getName() : string{
 		return "Soul Sand Valley";

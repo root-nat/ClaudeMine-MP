@@ -265,6 +265,9 @@ class InventoryManager{
 			if($action->sourceType !== NetworkInventoryAction::SOURCE_CONTAINER){
 				continue;
 			}
+			if($action->windowId === null){
+				continue; //windowId became nullable in 1.26.30; a container action without one targets no inventory
+			}
 
 			//legacy transactions should not modify or predict anything other than these inventories, since these are
 			//the only ones accessible when not in-game (ItemStackRequest is used for everything else)

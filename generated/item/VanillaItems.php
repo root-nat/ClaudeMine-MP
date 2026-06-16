@@ -279,6 +279,7 @@ final class VanillaItems{
 	private static ItemBlockWallOrFloor $_mPALE_OAK_SIGN;
 	private static Item $_mPAPER;
 	private static Item $_mPHANTOM_MEMBRANE;
+	private static SpawnEgg $_mPIGLIN_BRUTE_SPAWN_EGG;
 	private static SpawnEgg $_mPIGLIN_SPAWN_EGG;
 	private static SpawnEgg $_mPIG_SPAWN_EGG;
 	private static SpawnEgg $_mPILLAGER_SPAWN_EGG;
@@ -333,6 +334,7 @@ final class VanillaItems{
 	private static Item $_mRESIN_BRICK;
 	private static Item $_mRIB_ARMOR_TRIM_SMITHING_TEMPLATE;
 	private static RottenFlesh $_mROTTEN_FLESH;
+	private static Item $_mSADDLE;
 	private static Item $_mSCUTE;
 	private static Item $_mSENTRY_ARMOR_TRIM_SMITHING_TEMPLATE;
 	private static Item $_mSHAPER_ARMOR_TRIM_SMITHING_TEMPLATE;
@@ -363,6 +365,7 @@ final class VanillaItems{
 	private static Shovel $_mSTONE_SHOVEL;
 	private static Sword $_mSTONE_SWORD;
 	private static SpawnEgg $_mSTRAY_SPAWN_EGG;
+	private static SpawnEgg $_mSTRIDER_SPAWN_EGG;
 	private static StringItem $_mSTRING;
 	private static Item $_mSUGAR;
 	private static SuspiciousStew $_mSUSPICIOUS_STEW;
@@ -376,6 +379,7 @@ final class VanillaItems{
 	private static SpawnEgg $_mVILLAGER_SPAWN_EGG;
 	private static SpawnEgg $_mVINDICATOR_SPAWN_EGG;
 	private static Item $_mWARD_ARMOR_TRIM_SMITHING_TEMPLATE;
+	private static WarpedFungusOnAStick $_mWARPED_FUNGUS_ON_A_STICK;
 	private static HangingSign $_mWARPED_HANGING_SIGN;
 	private static ItemBlockWallOrFloor $_mWARPED_SIGN;
 	private static LiquidBucket $_mWATER_BUCKET;
@@ -671,6 +675,7 @@ final class VanillaItems{
 			"pale_oak_sign" => fn(ItemBlockWallOrFloor $v) => self::$_mPALE_OAK_SIGN = $v,
 			"paper" => fn(Item $v) => self::$_mPAPER = $v,
 			"phantom_membrane" => fn(Item $v) => self::$_mPHANTOM_MEMBRANE = $v,
+			"piglin_brute_spawn_egg" => fn(SpawnEgg $v) => self::$_mPIGLIN_BRUTE_SPAWN_EGG = $v,
 			"piglin_spawn_egg" => fn(SpawnEgg $v) => self::$_mPIGLIN_SPAWN_EGG = $v,
 			"pig_spawn_egg" => fn(SpawnEgg $v) => self::$_mPIG_SPAWN_EGG = $v,
 			"pillager_spawn_egg" => fn(SpawnEgg $v) => self::$_mPILLAGER_SPAWN_EGG = $v,
@@ -725,6 +730,7 @@ final class VanillaItems{
 			"resin_brick" => fn(Item $v) => self::$_mRESIN_BRICK = $v,
 			"rib_armor_trim_smithing_template" => fn(Item $v) => self::$_mRIB_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
 			"rotten_flesh" => fn(RottenFlesh $v) => self::$_mROTTEN_FLESH = $v,
+			"saddle" => fn(Item $v) => self::$_mSADDLE = $v,
 			"scute" => fn(Item $v) => self::$_mSCUTE = $v,
 			"sentry_armor_trim_smithing_template" => fn(Item $v) => self::$_mSENTRY_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
 			"shaper_armor_trim_smithing_template" => fn(Item $v) => self::$_mSHAPER_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
@@ -755,6 +761,7 @@ final class VanillaItems{
 			"stone_shovel" => fn(Shovel $v) => self::$_mSTONE_SHOVEL = $v,
 			"stone_sword" => fn(Sword $v) => self::$_mSTONE_SWORD = $v,
 			"stray_spawn_egg" => fn(SpawnEgg $v) => self::$_mSTRAY_SPAWN_EGG = $v,
+			"strider_spawn_egg" => fn(SpawnEgg $v) => self::$_mSTRIDER_SPAWN_EGG = $v,
 			"string" => fn(StringItem $v) => self::$_mSTRING = $v,
 			"sugar" => fn(Item $v) => self::$_mSUGAR = $v,
 			"suspicious_stew" => fn(SuspiciousStew $v) => self::$_mSUSPICIOUS_STEW = $v,
@@ -768,6 +775,7 @@ final class VanillaItems{
 			"villager_spawn_egg" => fn(SpawnEgg $v) => self::$_mVILLAGER_SPAWN_EGG = $v,
 			"vindicator_spawn_egg" => fn(SpawnEgg $v) => self::$_mVINDICATOR_SPAWN_EGG = $v,
 			"ward_armor_trim_smithing_template" => fn(Item $v) => self::$_mWARD_ARMOR_TRIM_SMITHING_TEMPLATE = $v,
+			"warped_fungus_on_a_stick" => fn(WarpedFungusOnAStick $v) => self::$_mWARPED_FUNGUS_ON_A_STICK = $v,
 			"warped_hanging_sign" => fn(HangingSign $v) => self::$_mWARPED_HANGING_SIGN = $v,
 			"warped_sign" => fn(ItemBlockWallOrFloor $v) => self::$_mWARPED_SIGN = $v,
 			"water_bucket" => fn(LiquidBucket $v) => self::$_mWATER_BUCKET = $v,
@@ -2031,6 +2039,11 @@ final class VanillaItems{
 		return clone self::$_mPHANTOM_MEMBRANE;
 	}
 
+	public static function PIGLIN_BRUTE_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mPIGLIN_BRUTE_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mPIGLIN_BRUTE_SPAWN_EGG;
+	}
+
 	public static function PIGLIN_SPAWN_EGG() : SpawnEgg{
 		if(!isset(self::$_mPIGLIN_SPAWN_EGG)){ self::init(); }
 		return clone self::$_mPIGLIN_SPAWN_EGG;
@@ -2301,6 +2314,11 @@ final class VanillaItems{
 		return clone self::$_mROTTEN_FLESH;
 	}
 
+	public static function SADDLE() : Item{
+		if(!isset(self::$_mSADDLE)){ self::init(); }
+		return clone self::$_mSADDLE;
+	}
+
 	public static function SCUTE() : Item{
 		if(!isset(self::$_mSCUTE)){ self::init(); }
 		return clone self::$_mSCUTE;
@@ -2451,6 +2469,11 @@ final class VanillaItems{
 		return clone self::$_mSTRAY_SPAWN_EGG;
 	}
 
+	public static function STRIDER_SPAWN_EGG() : SpawnEgg{
+		if(!isset(self::$_mSTRIDER_SPAWN_EGG)){ self::init(); }
+		return clone self::$_mSTRIDER_SPAWN_EGG;
+	}
+
 	public static function STRING() : StringItem{
 		if(!isset(self::$_mSTRING)){ self::init(); }
 		return clone self::$_mSTRING;
@@ -2514,6 +2537,11 @@ final class VanillaItems{
 	public static function WARD_ARMOR_TRIM_SMITHING_TEMPLATE() : Item{
 		if(!isset(self::$_mWARD_ARMOR_TRIM_SMITHING_TEMPLATE)){ self::init(); }
 		return clone self::$_mWARD_ARMOR_TRIM_SMITHING_TEMPLATE;
+	}
+
+	public static function WARPED_FUNGUS_ON_A_STICK() : WarpedFungusOnAStick{
+		if(!isset(self::$_mWARPED_FUNGUS_ON_A_STICK)){ self::init(); }
+		return clone self::$_mWARPED_FUNGUS_ON_A_STICK;
 	}
 
 	public static function WARPED_HANGING_SIGN() : HangingSign{

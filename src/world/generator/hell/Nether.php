@@ -38,6 +38,8 @@ use pocketmine\world\generator\object\OreType;
 use pocketmine\world\generator\populator\NetherDecoration;
 use pocketmine\world\generator\populator\Ore;
 use pocketmine\world\generator\populator\Populator;
+use pocketmine\world\generator\structure\NetherBastionPopulator;
+use pocketmine\world\generator\structure\NetherBastionStructure;
 use pocketmine\world\generator\structure\NetherFortressPopulator;
 use pocketmine\world\generator\structure\NetherFortressStructure;
 use pocketmine\world\World;
@@ -99,6 +101,19 @@ class Nether extends Generator{
 			$stairUpsideDownStateIds
 		);
 		$this->populators[] = new NetherFortressPopulator($this->seed, $fortress);
+
+		//bastion remnants: blackstone courtyards with crenellated ramparts; their loot chest and piglins are filled in on
+		//the main thread by NetherBastionFurnisher (registered for 'nether' in ChunkFurnisherRegistry)
+		$bastion = new NetherBastionStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::BLACKSTONE()->getStateId(),
+			VanillaBlocks::POLISHED_BLACKSTONE_BRICKS()->getStateId(),
+			VanillaBlocks::GILDED_BLACKSTONE()->getStateId(),
+			VanillaBlocks::GOLD()->getStateId(),
+			VanillaBlocks::MAGMA()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new NetherBastionPopulator($this->seed, $bastion);
 	}
 
 	public function generateChunk(ChunkManager $world, int $chunkX, int $chunkZ) : void{

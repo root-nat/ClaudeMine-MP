@@ -31,6 +31,7 @@ class RecordSound implements Sound{
 	public function __construct(private RecordType $recordType){}
 
 	public function encode(Vector3 $pos) : array{
-		return [LevelSoundEventPacket::nonActorSound($this->recordType->getSoundId(), $pos, false)];
+		//nonActorSound() takes the string sound name (not the int id) since 1.26.30
+		return [LevelSoundEventPacket::nonActorSound($this->recordType->getSoundName(), $pos, false)];
 	}
 }

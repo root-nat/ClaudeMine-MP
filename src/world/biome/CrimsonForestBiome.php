@@ -30,7 +30,15 @@ class CrimsonForestBiome extends NetherBiome{
 
 	public function __construct(){
 		parent::__construct();
-		$this->addPopulator(new NetherForestPopulator(VanillaBlocks::CRIMSON_FUNGUS(), VanillaBlocks::CRIMSON_ROOTS(), null, 28));
+		$this->addPopulator(new NetherForestPopulator(
+			VanillaBlocks::CRIMSON_FUNGUS(),
+			VanillaBlocks::CRIMSON_ROOTS(),
+			null,
+			28,
+			VanillaBlocks::CRIMSON_STEM(),
+			VanillaBlocks::NETHER_WART_BLOCK(),
+			true //crimson huge fungi drape weeping vines from their caps
+		));
 	}
 
 	public function getName() : string{

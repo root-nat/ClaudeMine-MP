@@ -25,22 +25,31 @@ namespace pocketmine\world\generator\populator;
 
 use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
+use pocketmine\block\VanillaBlocks;
 use pocketmine\utils\Random;
 use pocketmine\world\ChunkManager;
 use pocketmine\world\format\Chunk;
+use pocketmine\world\generator\object\NetherTree;
 
 /**
- * Scatters a Nether forest's small flora (fungi, roots and - in the warped forest - nether sprouts) over the nylium
- * surfaces of a chunk. The plant placed is weighted: mostly roots, some sprouts, the occasional fungus. The surface
- * itself (the nylium) is laid by the generator; this only decorates it.
+ * Decorates a Nether forest over its nylium: small flora (fungi, roots and - in the warped forest - nether sprouts),
+ * occasional huge fungi (the stem-and-cap "trees" with shroomlight and, in the crimson forest, weeping vines), and - in
+ * the warped forest - the odd cluster of twisting vines climbing up off the floor. The nylium surface itself is laid by
+ * the generator; this only decorates it.
  */
 class NetherForestPopulator implements Populator{
+
+	private const HUGE_FUNGUS_MIN_HEIGHT = 5;
 
 	public function __construct(
 		private Block $fungus,
 		private Block $roots,
 		private ?Block $sprouts,
-		private int $attempts
+		private int $attempts,
+		private ?Block $hugeFungusStem = null,
+		private ?Block $hugeFungusHat = null,
+		private bool $hugeFungusWeeps = false,
+		private ?Block $climbingVine = null
 	){}
 
 	public function populate(ChunkManager $world, int $chunkX, int $chunkZ, Random $random) : void{
@@ -64,6 +73,41 @@ class NetherForestPopulator implements Populator{
 				$block = $this->roots;
 			}
 			$world->setBlockAt($x, $y, $z, $block);
+		}
+
+		if($this->hugeFungusStem !== null && $this->hugeFungusHat !== null){
+			$hugeFungi = $random->nextRange(1, 4);
+			for($i = 0; $i < $hugeFungi; ++$i){
+				$x = $baseX + $random->nextRange(0, Chunk::EDGE_LENGTH - 1);
+				$z = $baseZ + $random->nextRange(0, Chunk::EDGE_LENGTH - 1);
+				$y = $this->findNyliumSurface($world, $x, $z, $random);
+				if($y === -1){
+					continue;
+				}
+				$height = self::HUGE_FUNGUS_MIN_HEIGHT + $random->nextBoundedInt(8); //5..12
+				$huge = $random->nextBoundedInt(4) === 0; //one in four is the bigger 3x3-stemmed variant
+				$fungus = new NetherTree($this->hugeFungusStem, $this->hugeFungusHat, VanillaBlocks::SHROOMLIGHT(), $height, $this->hugeFungusWeeps, $huge);
+				$fungus->getBlockTransaction($world, $x, $y, $z, $random)?->apply();
+			}
+		}
+
+		if($this->climbingVine !== null){
+			$clusters = $random->nextRange(0, 4);
+			for($i = 0; $i < $clusters; ++$i){
+				$x = $baseX + $random->nextRange(0, Chunk::EDGE_LENGTH - 1);
+				$z = $baseZ + $random->nextRange(0, Chunk::EDGE_LENGTH - 1);
+				$y = $this->findNyliumSurface($world, $x, $z, $random);
+				if($y === -1){
+					continue;
+				}
+				$length = 1 + $random->nextBoundedInt(4); //1..4 tall
+				for($h = 0; $h < $length; ++$h){
+					if($world->getBlockAt($x, $y + $h, $z)->getTypeId() !== BlockTypeIds::AIR){
+						break;
+					}
+					$world->setBlockAt($x, $y + $h, $z, $this->climbingVine);
+				}
+			}
 		}
 	}
 

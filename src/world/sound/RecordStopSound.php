@@ -24,12 +24,12 @@ declare(strict_types=1);
 namespace pocketmine\world\sound;
 
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
-use pocketmine\network\mcpe\protocol\types\LevelSoundEvent;
+use pocketmine\network\mcpe\protocol\StopSoundPacket;
 
 class RecordStopSound implements Sound{
 
 	public function encode(Vector3 $pos) : array{
-		return [LevelSoundEventPacket::nonActorSound(LevelSoundEvent::STOP_RECORD, $pos, false)];
+		//the LevelSoundEvent::STOP_RECORD constant was removed in 1.26.30; records are "legacy music", stopped via this
+		return [StopSoundPacket::create("", false, true)];
 	}
 }

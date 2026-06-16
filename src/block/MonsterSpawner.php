@@ -45,7 +45,7 @@ class MonsterSpawner extends Transparent{
 	private const UNCONFIGURED_ENTITY_TYPE = ":"; //the tile's placeholder until an entity type is assigned
 
 	private const TICK_PERIOD_ACTIVE = 10; //ticks between spawn ticks while a player is in range
-	private const TICK_PERIOD_IDLE = 60; //slower poll while no player is in range, so the loop stays cheap but responsive
+	private const TICK_PERIOD_IDLE = 100; //slower poll while no player is in range, so the loop stays cheap but responsive
 
 	/** @var string[] picked at random for a spawner generated outside the Nether (classic dungeon mobs) */
 	private const OVERWORLD_DEFAULT_ENTITIES = ["minecraft:zombie", "minecraft:skeleton", "minecraft:spider"];
@@ -75,10 +75,23 @@ class MonsterSpawner extends Transparent{
 
 	public function onScheduledUpdate() : void{
 		$world = $this->position->getWorld();
-		$tile = $this->getOrCreateTile($world);
-		if($tile === null){
+		$tile = $world->getTile($this->position);
+		if(!$tile instanceof TileMonsterSpawner){
+			if($tile === null){
+				//a generator-placed spawner has no tile yet (it never went through World::setBlock): register one. addTile()
+				//schedules the next update, which runs the first real spawn cycle - so we deliberately don't reschedule
+				//here, otherwise that schedule would race addTile's and the loop would run a tick early.
+				$tile = new TileMonsterSpawner($world, $this->position->asVector3());
+				$this->ensureConfigured($world, $tile);
+				$world->addTile($tile);
+			}else{
+				//a foreign tile occupies this position; keep polling rather than letting the loop die silently
+				$world->scheduleDelayedBlockUpdate($this->position, self::TICK_PERIOD_IDLE);
+			}
 			return;
 		}
+
+		$this->ensureConfigured($world, $tile);
 
 		if($world->getNearestEntity($this->position, $tile->getRequiredPlayerRange(), Player::class) === null){
 			$world->scheduleDelayedBlockUpdate($this->position, self::TICK_PERIOD_IDLE);
@@ -97,23 +110,9 @@ class MonsterSpawner extends Transparent{
 		$world->scheduleDelayedBlockUpdate($this->position, self::TICK_PERIOD_ACTIVE);
 	}
 
-	private function getOrCreateTile(World $world) : ?TileMonsterSpawner{
-		$tile = $world->getTile($this->position);
-		if($tile instanceof TileMonsterSpawner){
-			$this->ensureConfigured($world, $tile);
-			return $tile;
-		}
-		if($tile !== null){
-			return null; //another tile somehow occupies this position
-		}
-		//a generator-placed spawner has no tile yet (it never went through World::setBlock): create and register one
-		$tile = new TileMonsterSpawner($world, $this->position->asVector3());
-		$this->ensureConfigured($world, $tile);
-		$world->addTile($tile);
-		return $tile;
-	}
-
 	private function ensureConfigured(World $world, TileMonsterSpawner $tile) : void{
+		//generated spawners carry no mob type, so the first time one is seen we pick one by dimension. The client's
+		//spinning-mob preview only refreshes on the next chunk (re)load, but the spawn behaviour is correct immediately.
 		$id = $tile->getEntityTypeId();
 		if($id === "" || $id === self::UNCONFIGURED_ENTITY_TYPE){
 			$tile->setEntityTypeId($world->getDimension() === Dimension::NETHER ?
@@ -147,9 +146,13 @@ class MonsterSpawner extends Transparent{
 			$x = $this->position->getFloorX() + mt_rand(-$range, $range);
 			$y = $this->position->getFloorY() + mt_rand(-1, 1);
 			$z = $this->position->getFloorZ() + mt_rand(-$range, $range);
+			if($x === $this->position->getFloorX() && $y === $this->position->getFloorY() && $z === $this->position->getFloorZ()){
+				continue; //never spawn inside the spawner block itself
+			}
 			if(!$this->isValidSpawnCell($world, $x, $y, $z)){
 				continue;
 			}
+			//X/Z centred in the block; Y left at the block floor so the mob's feet rest on the solid block below
 			$this->spawnEntity($world, $entityType, $x + 0.5, (float) $y, $z + 0.5);
 		}
 	}

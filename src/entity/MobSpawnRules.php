@@ -41,6 +41,8 @@ final class MobSpawnRules{
 	public const HOSTILE_CAP = 3;
 	/** Maximum nearby passive animals before a new passive spawn is skipped. */
 	public const PASSIVE_CAP = 4;
+	/** The Nether's whole roster (hostile + neutral) shares one cap, set a little higher so its caverns feel populated. */
+	public const NETHER_MOB_CAP = 5;
 	/** Radius (blocks) used when counting nearby mobs against the cap. */
 	public const CAP_RADIUS = 24;
 

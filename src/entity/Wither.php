@@ -90,8 +90,7 @@ class Wither extends Monster{
 				$this->getId(),
 				$this->bossBar->getTitle(),
 				$this->bossBar->getPercentage(),
-				$this->bossBar->isDarkenScreen(),
-				$this->bossBar->getColor()
+				$this->bossBar->getColor() //$darkenScreen was dropped from show() in 1.26.30; $color is now the 4th arg
 			));
 		}
 	}

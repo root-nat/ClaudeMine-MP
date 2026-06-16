@@ -105,6 +105,7 @@ use pocketmine\world\generator\executor\GeneratorExecutor;
 use pocketmine\world\generator\executor\GeneratorExecutorSetupParameters;
 use pocketmine\world\generator\executor\SyncGeneratorExecutor;
 use pocketmine\world\generator\GeneratorManager;
+use pocketmine\world\generator\structure\ChunkFurnisherRegistry;
 use pocketmine\world\generator\PopulationTask;
 use pocketmine\world\light\BlockLightUpdate;
 use pocketmine\world\light\LightPopulationTask;
@@ -3675,6 +3676,16 @@ class World implements ChunkManager{
 
 					foreach($this->getChunkListeners($x, $z) as $listener){
 						$listener->onChunkPopulated($x, $z, $chunk);
+					}
+
+					//let structures finish what the async generator can't: tile contents (chest loot) and entities. Guard
+					//each furnisher so a bug in one can never break world generation.
+					foreach(ChunkFurnisherRegistry::getInstance()->getFurnishers($this->provider->getWorldData()->getGenerator()) as $furnisher){
+						try{
+							$furnisher->furnishChunk($this, $x, $z, $chunk);
+						}catch(\Throwable $e){
+							$this->logger->logException($e);
+						}
 					}
 				}
 			}else{

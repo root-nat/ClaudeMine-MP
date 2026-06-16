@@ -23,11 +23,18 @@ declare(strict_types=1);
 
 namespace pocketmine\world\biome;
 
+use pocketmine\world\generator\populator\BasaltColumnPopulator;
+
 /**
- * A broken landscape of basalt and blackstone pocked with lava and magma. The generator lays the basalt/blackstone
- * surface; the tall basalt columns are not modelled yet.
+ * A broken landscape of basalt and blackstone pocked with lava and magma, studded with the signature basalt columns laid
+ * down by {@link BasaltColumnPopulator}.
  */
 class BasaltDeltasBiome extends NetherBiome{
+
+	public function __construct(){
+		parent::__construct();
+		$this->addPopulator(new BasaltColumnPopulator());
+	}
 
 	public function getName() : string{
 		return "Basalt Deltas";

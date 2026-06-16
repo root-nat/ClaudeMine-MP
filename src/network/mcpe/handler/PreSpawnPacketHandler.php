@@ -110,6 +110,7 @@ class PreSpawnPacketHandler extends PacketHandler{
 				false,
 				false,
 				new NetworkPermissions(disableClientSounds: true),
+				false, //isLoggingChat: this server doesn't relay chat to Mojang's reporting system (new in 1.26.30)
 				null,
 				new ServerTelemetryData("", "", "", ""),
 				[],
