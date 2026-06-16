@@ -21,11 +21,15 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\block;
+namespace pocketmine\world\biome;
 
-class Redstone extends Opaque{
+/**
+ * A bleak open expanse of soul sand and soul soil. The generator lays the soul-coloured surface; bone fossils and soul
+ * fire are not modelled yet.
+ */
+class SoulSandValleyBiome extends NetherBiome{
 
-	public function getWeakRedstonePower(int $face) : int{
-		return 15; //a block of redstone is a constant power source, weakly powering every adjacent block/component like a torch
+	public function getName() : string{
+		return "Soul Sand Valley";
 	}
 }

@@ -52,6 +52,8 @@ use pocketmine\entity\Stray;
 use pocketmine\entity\Evoker;
 use pocketmine\entity\Hoglin;
 use pocketmine\entity\Piglin;
+use pocketmine\entity\PiglinBrute;
+use pocketmine\entity\Strider;
 use pocketmine\entity\Pillager;
 use pocketmine\entity\Ravager;
 use pocketmine\entity\Villager;
@@ -239,6 +241,10 @@ final class VanillaItemsInputs extends RegistrySource{
 		self::register("firework_star", fn(IID $id) => new FireworkStar($id, "Firework Star"));
 		self::register("fire_charge", fn(IID $id) => new FireCharge($id, "Fire Charge"));
 		self::register("fishing_rod", fn(IID $id) => new FishingRod($id, "Fishing Rod", [EnchantmentTags::FISHING_ROD]));
+		self::register("warped_fungus_on_a_stick", fn(IID $id) => new WarpedFungusOnAStick($id, "Warped Fungus on a Stick"));
+		self::register("saddle", fn(IID $id) => new class($id, "Saddle") extends Item{
+			public function getMaxStackSize() : int{ return 1; }
+		});
 		self::register("flint", fn(IID $id) => new Item($id, "Flint"));
 		self::register("flint_and_steel", fn(IID $id) => new FlintSteel($id, "Flint and Steel", [EnchantmentTags::FLINT_AND_STEEL]));
 		self::register("ghast_tear", fn(IID $id) => new Item($id, "Ghast Tear"));
@@ -478,6 +484,16 @@ final class VanillaItemsInputs extends RegistrySource{
 		self::register("piglin_spawn_egg", fn(IID $id) => new class($id, "Piglin Spawn Egg") extends SpawnEgg{
 			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
 				return new Piglin(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("piglin_brute_spawn_egg", fn(IID $id) => new class($id, "Piglin Brute Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new PiglinBrute(Location::fromObject($pos, $world, $yaw, $pitch));
+			}
+		});
+		self::register("strider_spawn_egg", fn(IID $id) => new class($id, "Strider Spawn Egg") extends SpawnEgg{
+			protected function createEntity(World $world, Vector3 $pos, float $yaw, float $pitch) : Entity{
+				return new Strider(Location::fromObject($pos, $world, $yaw, $pitch));
 			}
 		});
 		self::register("husk_spawn_egg", fn(IID $id) => new class($id, "Husk Spawn Egg") extends SpawnEgg{

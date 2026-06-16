@@ -32,4 +32,30 @@ trait RailPoweredByRedstoneTrait{
 		parent::describeBlockOnlyState($w);
 		$w->bool($this->powered);
 	}
+
+	public function onPostPlace() : void{
+		parent::onPostPlace();
+		$this->updateRailPowerState();
+	}
+
+	public function onNearbyBlockChange() : void{
+		parent::onNearbyBlockChange(); //BaseRail checks it still has support (may break the rail)
+		$this->updateRailPowerState();
+	}
+
+	/**
+	 * Toggles the rail's powered state from the redstone power it is receiving (a powered rail accelerates/brakes carts,
+	 * an activator rail triggers them). Only direct power is read; the vanilla 8-block powered-rail chain is not modelled.
+	 */
+	private function updateRailPowerState() : void{
+		$world = $this->position->getWorld();
+		if(!$world->getBlock($this->position)->hasSameTypeId($this)){
+			return; //the rail was just broken by the support check in parent::onNearbyBlockChange
+		}
+		$receiving = $this->isReceivingRedstonePower();
+		if($receiving !== $this->powered){
+			$this->powered = $receiving;
+			$world->setBlock($this->position, $this);
+		}
+	}
 }

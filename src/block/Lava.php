@@ -25,6 +25,7 @@ namespace pocketmine\block;
 
 use pocketmine\entity\Entity;
 use pocketmine\event\entity\EntityCombustByBlockEvent;
+use pocketmine\world\Dimension;
 use pocketmine\event\entity\EntityDamageByBlockEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\math\Facing;
@@ -47,11 +48,11 @@ class Lava extends Liquid{
 	}
 
 	public function tickRate() : int{
-		return 30;
+		return $this->position->getWorld()->getDimension() === Dimension::NETHER ? 10 : 30; //lava flows/ticks faster in the Nether
 	}
 
 	public function getFlowDecayPerBlock() : int{
-		return 2; //TODO: this is 1 in the nether
+		return $this->position->getWorld()->getDimension() === Dimension::NETHER ? 1 : 2; //Nether lava spreads further (7 blocks vs 3)
 	}
 
 	/**

@@ -43,6 +43,7 @@ use pocketmine\entity\Entity;
 use pocketmine\entity\Human;
 use pocketmine\entity\Living;
 use pocketmine\entity\Location;
+use pocketmine\entity\RideableEntity;
 use pocketmine\entity\NeverSavedWithChunkEntity;
 use pocketmine\entity\object\ItemEntity;
 use pocketmine\entity\projectile\Arrow;
@@ -278,6 +279,9 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 
 	protected float $moveRateLimit = 10 * self::MOVES_PER_TICK;
 	protected ?float $lastMovementProcess = null;
+
+	/** The rideable this player is currently steering, so the input handler can feed it the player's input each tick. */
+	protected ?RideableEntity $ridingVehicle = null;
 
 	protected int $inAirTicks = 0;
 
@@ -1392,6 +1396,18 @@ class Player extends Human implements CommandSender, ChunkListener, IPlayer, Nev
 		if($this->nextChunkOrderRun > 20){
 			$this->nextChunkOrderRun = 20;
 		}
+	}
+
+	/**
+	 * The rideable this player is currently the controlling rider of, or null. Set by the riding machinery on mount so the
+	 * input handler can feed this player's per-tick input to the vehicle even when the client isn't a predicted vehicle.
+	 */
+	public function getRidingVehicle() : ?RideableEntity{
+		return $this->ridingVehicle;
+	}
+
+	public function setRidingVehicle(?RideableEntity $vehicle) : void{
+		$this->ridingVehicle = $vehicle;
 	}
 
 	private function actuallyHandleMovement(Vector3 $newPos) : void{

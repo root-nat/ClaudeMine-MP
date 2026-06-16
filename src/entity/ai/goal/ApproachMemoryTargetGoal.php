@@ -78,6 +78,13 @@ abstract class ApproachMemoryTargetGoal extends BaseGoal{
 		$this->navigator->setPath(null);
 	}
 
+	/**
+	 * Called each tick while the mob stands within stopDistance of its target. Subclasses override to act on arrival (a
+	 * piglin grabbing the gold it walked to...); the default does nothing, so plain approach goals just stop and wait.
+	 */
+	protected function onReachedTarget(MobContext $mob, TargetCandidate $target) : void{
+	}
+
 	public function tick(MobContext $mob) : void{
 		$target = $this->target($mob);
 		if($target === null){
@@ -89,6 +96,7 @@ abstract class ApproachMemoryTargetGoal extends BaseGoal{
 		$pos = $mob->getPosition();
 		if($target->distanceSquaredTo($pos->x, $pos->y, $pos->z) <= $this->stopDistance() ** 2){
 			$this->navigator->setPath(null);
+			$this->onReachedTarget($mob, $target);
 			return;
 		}
 

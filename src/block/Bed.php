@@ -33,6 +33,7 @@ use pocketmine\block\utils\SupportType;
 use pocketmine\data\runtime\RuntimeDataDescriber;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Living;
+use pocketmine\event\block\BlockPreExplodeEvent;
 use pocketmine\item\Item;
 use pocketmine\lang\KnownTranslationFactory;
 use pocketmine\math\AxisAlignedBB;
@@ -41,6 +42,8 @@ use pocketmine\math\Vector3;
 use pocketmine\player\Player;
 use pocketmine\utils\TextFormat;
 use pocketmine\world\BlockTransaction;
+use pocketmine\world\Explosion;
+use pocketmine\world\Position;
 use pocketmine\world\World;
 
 class Bed extends Transparent implements Colored, HorizontalFacing{
@@ -121,6 +124,11 @@ class Bed extends Transparent implements Colored, HorizontalFacing{
 
 	public function onInteract(Item $item, int $face, Vector3 $clickVector, ?Player $player = null, array &$returnedItems = []) : bool{
 		if($player !== null){
+			if(!$this->position->getWorld()->getDimension()->hasDayNightCycle()){
+				//a bed used where there's no night to sleep through - the Nether or the End - explodes instead (vanilla)
+				$this->explode($player);
+				return true;
+			}
 			$other = $this->getOtherHalf();
 			$playerPos = $player->getPosition();
 			if($other === null){
@@ -162,6 +170,28 @@ class Bed extends Transparent implements Colored, HorizontalFacing{
 			$this->occupied = $other->occupied;
 			$this->position->getWorld()->setBlock($this->position, $this);
 		}
+	}
+
+	private function explode(?Player $player) : void{
+		$world = $this->position->getWorld();
+		$ev = new BlockPreExplodeEvent($this, 5, $player);
+		$ev->setIncendiary(true);
+		$ev->call();
+		if($ev->isCancelled()){
+			return;
+		}
+
+		$world->setBlock($this->position, VanillaBlocks::AIR());
+		if(($other = $this->getOtherHalf()) !== null){
+			$world->setBlock($other->position, VanillaBlocks::AIR());
+		}
+
+		$explosion = new Explosion(Position::fromObject($this->position->add(0.5, 0.5, 0.5), $world), $ev->getRadius(), $this);
+		$explosion->setFireChance($ev->getFireChance());
+		if($ev->isBlockBreaking()){
+			$explosion->explodeA();
+		}
+		$explosion->explodeB();
 	}
 
 	public function onEntityLand(Entity $entity) : ?float{

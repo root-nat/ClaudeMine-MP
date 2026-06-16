@@ -323,6 +323,14 @@ final class EntityFactory{
 			return new Piglin(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['Piglin', 'minecraft:piglin']);
 
+		$this->register(PiglinBrute::class, function(World $world, CompoundTag $nbt) : PiglinBrute{
+			return new PiglinBrute(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['PiglinBrute', 'minecraft:piglin_brute']);
+
+		$this->register(Strider::class, function(World $world, CompoundTag $nbt) : Strider{
+			return new Strider(Helper::parseLocation($nbt, $world), $nbt);
+		}, ['Strider', 'minecraft:strider']);
+
 		$this->register(Villager::class, function(World $world, CompoundTag $nbt) : Villager{
 			return new Villager(Helper::parseLocation($nbt, $world), $nbt);
 		}, ['Villager', 'minecraft:villager']);

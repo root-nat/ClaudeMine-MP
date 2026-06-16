@@ -21,11 +21,15 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\block;
+namespace pocketmine\world\biome;
 
-class Redstone extends Opaque{
+/**
+ * A broken landscape of basalt and blackstone pocked with lava and magma. The generator lays the basalt/blackstone
+ * surface; the tall basalt columns are not modelled yet.
+ */
+class BasaltDeltasBiome extends NetherBiome{
 
-	public function getWeakRedstonePower(int $face) : int{
-		return 15; //a block of redstone is a constant power source, weakly powering every adjacent block/component like a torch
+	public function getName() : string{
+		return "Basalt Deltas";
 	}
 }

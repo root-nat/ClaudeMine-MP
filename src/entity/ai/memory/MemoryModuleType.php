@@ -54,4 +54,6 @@ enum MemoryModuleType : string{
 	case COMBAT_TARGET = "combat_target";
 	//value type: TargetCandidate - a nearby entity this mob is afraid of and should flee from (e.g. a creeper from a cat)
 	case AVOID_TARGET = "avoid_target";
+	//value type: TargetCandidate - a nearby dropped item this mob wants to walk to and pick up (e.g. a piglin and gold)
+	case PICKUP_TARGET = "pickup_target";
 }

@@ -23,10 +23,13 @@ declare(strict_types=1);
 
 namespace pocketmine\entity\object;
 
+use pocketmine\block\ActivatorRail;
 use pocketmine\block\BaseRail;
 use pocketmine\block\PoweredRail;
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntitySizeInfo;
+use pocketmine\entity\Living;
+use pocketmine\entity\RideableEntity;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\item\Item;
@@ -43,6 +46,8 @@ abstract class AbstractMinecart extends Entity{
 	private const POWERED_RAIL_ACCEL = 0.06;
 	private const POWERED_RAIL_BRAKE = 0.5;
 	private const ROLL_FRICTION = 0.97;
+	/** Horizontal impulse applied to push an overlapping entity (and the cart itself) apart each tick they collide. */
+	private const COLLISION_PUSH = 0.1;
 
 	protected int $travelDirection = Facing::NORTH;
 
@@ -67,10 +72,55 @@ abstract class AbstractMinecart extends Entity{
 		$rail = $this->findRail();
 		if($rail !== null){
 			$this->moveAlongRail($rail);
+			if($rail instanceof ActivatorRail){
+				$this->onActivatorRail($rail->isPowered());
+			}
 			$hasUpdate = true;
 		}
 
+		$this->pushCollidingEntities();
+
 		return $hasUpdate || abs($this->motion->x) > self::MOTION_THRESHOLD || abs($this->motion->z) > self::MOTION_THRESHOLD;
+	}
+
+	/**
+	 * Soft entity collision: pushes any living entity or other minecart overlapping this cart apart from it (and nudges
+	 * the cart the opposite way), so a player can bump and shove the cart and the cart shoves things it runs into. The
+	 * cart's own rider is left alone.
+	 */
+	private function pushCollidingEntities() : void{
+		$rider = $this instanceof RideableEntity ? $this->getRider() : null;
+		foreach($this->getWorld()->getNearbyEntities($this->boundingBox->expandedCopy(0.2, 0.0, 0.2), $this) as $entity){
+			if($entity === $rider || (!($entity instanceof Living) && !($entity instanceof AbstractMinecart))){
+				continue;
+			}
+			$ePos = $entity->getPosition();
+			$dx = $ePos->x - $this->location->x;
+			$dz = $ePos->z - $this->location->z;
+			$distSq = ($dx * $dx) + ($dz * $dz);
+			if($distSq < 1e-4){
+				continue;
+			}
+			$push = self::COLLISION_PUSH / sqrt($distSq);
+			$entity->addMotion($dx * $push, 0.0, $dz * $push); //always shove the other thing apart from the cart
+			if($entity instanceof Living){
+				$motion = $entity->getMotion();
+				if((($motion->x * $motion->x) + ($motion->z * $motion->z)) > self::MOTION_THRESHOLD){
+					//only a MOVING entity (someone walking into the cart) shoves it back; an idle one standing nearby must not
+					//drive a parked cart off down the track. Another minecart is NOT self-pushed here - its own collision loop
+					//already pushes this cart back, so doing it here too would double the impulse.
+					$this->addMotion(-$dx * $push, 0.0, -$dz * $push);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Called each tick the cart rides an activator rail. Subclasses react to a powered one - a TNT minecart primes; a
+	 * rideable cart would eject its rider. The plain cart does nothing.
+	 */
+	protected function onActivatorRail(bool $powered) : void{
+		//NOOP
 	}
 
 	private function findRail() : ?BaseRail{

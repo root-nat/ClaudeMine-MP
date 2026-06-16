@@ -124,9 +124,11 @@ abstract class AbstractMob extends Living implements MobContext{
 
 		$this->targetSelector->selectTarget($this);
 		if($this->isMovementFrozen()){
-			//a frozen mob (e.g. a piglin admiring a bartered ingot) holds its ground: skip its movement/attack goals and
-			//damp any residual horizontal drift so it stops on the spot, keeping vertical motion for gravity
-			$this->motion = $this->motion->withComponents(0.0, $this->motion->y, 0.0);
+			//the AI doesn't drive the body this tick (a piglin admiring a bartered ingot, or a strider steered by its rider)
+			if($this->dampMotionWhileFrozen()){
+				//holding a pose: damp residual horizontal drift so it stops on the spot, keeping vertical motion for gravity
+				$this->motion = $this->motion->withComponents(0.0, $this->motion->y, 0.0);
+			}
 		}else{
 			$this->goalSelector->tick($this);
 		}
@@ -135,11 +137,19 @@ abstract class AbstractMob extends Living implements MobContext{
 	}
 
 	/**
-	 * Whether this mob should hold still this tick, ignoring its movement/attack goals (e.g. a piglin admiring a bartered
-	 * gold ingot). Override per species; defaults to never frozen.
+	 * Whether the AI movement/attack goals should be skipped this tick - the body is held still or driven externally
+	 * (e.g. a piglin admiring a bartered ingot, or a strider steered by its rider). Override per species; default false.
 	 */
 	protected function isMovementFrozen() : bool{
 		return false;
+	}
+
+	/**
+	 * When frozen, whether to also damp horizontal motion so the mob stops dead. True for a held pose (admiring); false
+	 * when something else is feeding the body motion (a rider steering it), so that input isn't cancelled.
+	 */
+	protected function dampMotionWhileFrozen() : bool{
+		return true;
 	}
 
 	public function getFollowRange() : float{

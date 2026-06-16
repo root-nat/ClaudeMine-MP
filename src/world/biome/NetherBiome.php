@@ -21,11 +21,18 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\block;
+namespace pocketmine\world\biome;
 
-class Redstone extends Opaque{
+/**
+ * Shared base for the Nether's biomes: bone-dry and scorching (no rain ever), spanning the whole build height. Subclasses
+ * supply a name and their own surface flora populators; the {@link \pocketmine\world\generator\hell\Nether} generator
+ * picks which one a chunk gets and lays its surface blocks.
+ */
+abstract class NetherBiome extends Biome{
 
-	public function getWeakRedstonePower(int $face) : int{
-		return 15; //a block of redstone is a constant power source, weakly powering every adjacent block/component like a torch
+	public function __construct(){
+		$this->temperature = 2.0;
+		$this->rainfall = 0.0;
+		$this->setElevation(0, 128);
 	}
 }

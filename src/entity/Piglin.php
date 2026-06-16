@@ -23,8 +23,11 @@ declare(strict_types=1);
 
 namespace pocketmine\entity;
 
+use pocketmine\entity\ai\goal\PiglinGoldPickupGoal;
 use pocketmine\entity\ai\goal\RandomStrollGoal;
+use pocketmine\entity\ai\sensor\PiglinGoldPickupSensor;
 use pocketmine\entity\ai\sensor\PiglinTargetSensor;
+use pocketmine\entity\object\ItemEntity;
 use pocketmine\item\Item;
 use pocketmine\item\ItemTypeIds;
 use pocketmine\item\VanillaItems;
@@ -34,26 +37,22 @@ use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
 use pocketmine\player\Player;
-use pocketmine\world\Dimension;
 use function mt_rand;
 
 /**
  * A gold-obsessed brute of the crimson forest and nether wastes. It is wary rather than mindless: it attacks a player
  * wearing no scrap of gold armour on sight, and any player who strikes a piglin enrages the whole sounder (see {@link
- * AbstractPiglin}/{@link PiglinTargetSensor}). Outside the Nether it zombifies into a {@link ZombifiedPiglin}.
- * (Bartering, gold pick-up/admiration, hunting hoglins, and fear of soul fire / wither skeletons are not yet modelled.)
+ * AbstractPiglin}/{@link PiglinTargetSensor}). Outside the Nether it zombifies into a {@link ZombifiedPiglin}. It
+ * barters gold ingots handed to it OR thrown near it (it walks over, picks one up and admires it). (Hunting hoglins and
+ * fear of soul fire / wither skeletons are not yet modelled.)
  */
 class Piglin extends AbstractPiglin{
 
-	/** Ticks spent outside the Nether before the piglin zombifies (15s). */
-	private const ZOMBIFY_TICKS = 300;
 	/** Ticks a piglin admires a bartered gold ingot before handing back a reward (6s). */
 	private const ADMIRE_TICKS = 120;
 
-	private const TAG_ZOMBIFY = "ZombifyTicks"; //TAG_Int
 	private const TAG_BARTER = "BarterTicks"; //TAG_Int
 
-	private int $zombifyTicks = 0;
 	private int $barterTicks = 0;
 
 	public static function getNetworkTypeId() : string{ return EntityIds::PIGLIN; }
@@ -69,6 +68,11 @@ class Piglin extends AbstractPiglin{
 	protected function registerBehaviour() : void{
 		//hostility is conditional (gold armour pacifies; a blow enrages the pack) - driven by the piglin target sensor
 		$this->addSensor(new PiglinTargetSensor($this->getFollowRange()));
+		//notice gold dropped nearby and go fetch it to barter (the "throw gold to a piglin" trade); scan briskly (every 5t)
+		//so a candidate that vanishes (item eaten/despawned) stops suppressing combat quickly
+		$this->addSensor(new PiglinGoldPickupSensor($this->getFollowRange(), 5));
+		//fetching gold preempts attacking: a piglin is distracted by gold even away from a target it would otherwise fight
+		$this->addGoal(0, new PiglinGoldPickupGoal());
 		$this->registerAttackGoals();
 		$this->addGoal(8, new RandomStrollGoal());
 	}
@@ -81,10 +85,7 @@ class Piglin extends AbstractPiglin{
 				$item->pop();
 				$player->getInventory()->setItemInHand($item);
 			}
-			$this->barterTicks = self::ADMIRE_TICKS;
-			//raise the gold ingot to its face: swap the displayed hand item and light up the admiring pose flag
-			$this->networkPropertiesDirty = true;
-			$this->broadcastHeldItem();
+			$this->startBarter();
 			return true;
 		}
 		return parent::onInteract($player, $clickPos);
@@ -109,19 +110,11 @@ class Piglin extends AbstractPiglin{
 			$hasUpdate = true;
 		}
 
-		//away from the Nether a piglin trembles and turns into a zombified piglin
-		if($this->getWorld()->getDimension() !== Dimension::NETHER){
-			$this->zombifyTicks += $tickDiff;
-			if($this->zombifyTicks >= self::ZOMBIFY_TICKS){
-				$this->zombify();
-				return $hasUpdate;
-			}
-			$hasUpdate = true;
-		}else{
-			$this->zombifyTicks = 0;
-		}
-
 		return $hasUpdate;
+	}
+
+	protected function canZombify() : bool{
+		return true; //a living piglin reverts to a zombified piglin away from the Nether
 	}
 
 	public function isPersistent() : bool{
@@ -147,32 +140,64 @@ class Piglin extends AbstractPiglin{
 
 	public function saveNBT() : CompoundTag{
 		$nbt = parent::saveNBT();
-		$nbt->setInt(self::TAG_ZOMBIFY, $this->zombifyTicks);
 		$nbt->setInt(self::TAG_BARTER, $this->barterTicks);
 		return $nbt;
 	}
 
 	protected function initEntity(CompoundTag $nbt) : void{
 		parent::initEntity($nbt);
-		$this->zombifyTicks = $nbt->getInt(self::TAG_ZOMBIFY, 0);
 		$this->barterTicks = $nbt->getInt(self::TAG_BARTER, 0);
 	}
 
-	private function zombify() : void{
+	protected function onBeforeZombify() : void{
 		//a piglin still admiring a bartered ingot when it transforms hands the reward back first, instead of eating the gold
 		if($this->barterTicks > 0){
 			$this->dropBarter();
 			$this->barterTicks = 0;
 		}
-		$zombie = new ZombifiedPiglin(Location::fromObject($this->location, $this->getWorld()));
-		$zombie->setHealth($this->getHealth());
-		//carry an active grudge across the transformation, so attacking a piglin that then zombifies doesn't reset its aggro
-		$targetId = $this->getAngerTargetId();
-		if($targetId !== null){
-			$zombie->angerAt($targetId, $this->getRemainingAngerTicks());
+	}
+
+	/**
+	 * Whether this piglin is willing to fetch and barter dropped gold right now: calm (not enraged) and not already
+	 * admiring a piece. Read by {@link PiglinGoldPickupSensor}.
+	 */
+	public function wantsBarterPickup() : bool{
+		return !$this->isAngry() && $this->barterTicks <= 0;
+	}
+
+	/**
+	 * Grabs a single gold ingot off the given dropped-item entity (by id) and starts admiring it. Returns true if the
+	 * pickup happened. Called by {@link PiglinGoldPickupGoal} once the piglin reaches the gold it walked to.
+	 */
+	public function pickUpBarterGold(int $entityId) : bool{
+		if(!$this->wantsBarterPickup()){
+			return false;
 		}
-		$zombie->spawnToAll();
-		$this->flagForDespawn();
+		$entity = $this->getWorld()->getEntity($entityId);
+		if(!$entity instanceof ItemEntity || $entity->isFlaggedForDespawn()){
+			return false;
+		}
+		$dropped = $entity->getItem();
+		if($dropped->getTypeId() !== ItemTypeIds::GOLD_INGOT || $entity->getPosition()->distanceSquared($this->location) > 4.0){
+			return false;
+		}
+
+		//take a single ingot off the dropped stack; any extra ingots stay on the ground
+		$remaining = $dropped->getCount() - 1;
+		if($remaining <= 0){
+			$entity->flagForDespawn();
+		}else{
+			$entity->setStackSize($remaining);
+		}
+		$this->startBarter();
+		return true;
+	}
+
+	private function startBarter() : void{
+		$this->barterTicks = self::ADMIRE_TICKS;
+		//raise the gold ingot to its face: swap the displayed hand item and light up the admiring pose flag
+		$this->networkPropertiesDirty = true;
+		$this->broadcastHeldItem();
 	}
 
 	private function dropBarter() : void{

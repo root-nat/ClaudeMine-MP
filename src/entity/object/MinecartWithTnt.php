@@ -64,6 +64,12 @@ class MinecartWithTnt extends AbstractMinecart implements Explosive{
 		$this->networkPropertiesDirty = true;
 	}
 
+	protected function onActivatorRail(bool $powered) : void{
+		if($powered && !$this->primed){
+			$this->prime(); //a powered activator rail ignites a TNT minecart riding over it
+		}
+	}
+
 	protected function entityBaseTick(int $tickDiff = 1) : bool{
 		$hasUpdate = parent::entityBaseTick($tickDiff);
 		if($this->primed && !$this->isFlaggedForDespawn()){

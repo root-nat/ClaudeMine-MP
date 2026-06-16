@@ -42,6 +42,7 @@ final class BreedingHelper{
 	public const RABBIT = "rabbit";
 	public const FOX = "fox";
 	public const HOGLIN = "hoglin";
+	public const STRIDER = "strider";
 
 	/** How long an animal stays ready to breed after being fed (30s). */
 	public const IN_LOVE_TICKS = 600;
@@ -68,6 +69,7 @@ final class BreedingHelper{
 			self::RABBIT => [ItemTypeIds::CARROT, ItemTypeIds::GOLDEN_CARROT],
 			self::FOX => [ItemTypeIds::SWEET_BERRIES],
 			self::HOGLIN => [ItemTypeIds::fromBlockTypeId(BlockTypeIds::CRIMSON_FUNGUS)],
+			self::STRIDER => [ItemTypeIds::fromBlockTypeId(BlockTypeIds::WARPED_FUNGUS)],
 			default => []
 		};
 	}

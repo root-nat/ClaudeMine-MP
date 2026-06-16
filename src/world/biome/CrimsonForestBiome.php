@@ -21,11 +21,19 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\block;
+namespace pocketmine\world\biome;
 
-class Redstone extends Opaque{
+use pocketmine\block\VanillaBlocks;
+use pocketmine\world\generator\populator\NetherForestPopulator;
 
-	public function getWeakRedstonePower(int $face) : int{
-		return 15; //a block of redstone is a constant power source, weakly powering every adjacent block/component like a torch
+class CrimsonForestBiome extends NetherBiome{
+
+	public function __construct(){
+		parent::__construct();
+		$this->addPopulator(new NetherForestPopulator(VanillaBlocks::CRIMSON_FUNGUS(), VanillaBlocks::CRIMSON_ROOTS(), null, 28));
+	}
+
+	public function getName() : string{
+		return "Crimson Forest";
 	}
 }

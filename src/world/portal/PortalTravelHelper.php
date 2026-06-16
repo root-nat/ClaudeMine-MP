@@ -256,15 +256,18 @@ final class PortalTravelHelper{
 		$obsidian = VanillaBlocks::OBSIDIAN();
 		$portal = VanillaBlocks::NETHER_PORTAL()->setAxis(Axis::X);
 
-		for($ox = -1; $ox <= 2; ++$ox){
-			for($oz = -1; $oz <= 1; ++$oz){
+		//carve a generous open chamber with a solid obsidian floor so the arriving player can stand and step out instead of
+		//being boxed into the netherrack around a tiny portal hole
+		for($ox = -2; $ox <= 3; ++$ox){
+			for($oz = -2; $oz <= 2; ++$oz){
 				$world->setBlockAt($x + $ox, $floorY - 1, $z + $oz, $obsidian, false);
-				for($oy = 0; $oy < 5; ++$oy){
+				for($oy = 0; $oy <= 4; ++$oy){
 					$world->setBlockAt($x + $ox, $floorY + $oy, $z + $oz, $air, false);
 				}
 			}
 		}
 
+		//the 4-wide x 5-tall obsidian frame with the portal surface inside it, along the X axis at this Z
 		for($i = -1; $i <= 2; ++$i){
 			for($h = 0; $h < 5; ++$h){
 				if($i === -1 || $i === 2 || $h === 0 || $h === 4){
@@ -275,7 +278,9 @@ final class PortalTravelHelper{
 			}
 		}
 
-		return new Position($x + 0.5, $floorY + 1, $z + 0.5, $world);
+		//arrive standing ON the floor, one block IN FRONT of the portal plane (in the cleared chamber) - not embedded in the
+		//portal blocks, so there's room to move and no immediate re-trigger
+		return new Position($x + 0.5, $floorY, $z + 1.5, $world);
 	}
 
 	private static function findPortalFloor(World $world, int $x, int $y, int $z) : int{

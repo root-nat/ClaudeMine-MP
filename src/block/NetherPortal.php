@@ -66,6 +66,12 @@ class NetherPortal extends Transparent{
 		return [];
 	}
 
+	public function hasEntityCollision() : bool{
+		//no collision box (you walk through), but this is required for onEntityInside() to fire - without it the portal
+		//never triggers travel. Same trick as a pressure plate.
+		return true;
+	}
+
 	public function getSupportType(int $facing) : SupportType{
 		return SupportType::NONE;
 	}

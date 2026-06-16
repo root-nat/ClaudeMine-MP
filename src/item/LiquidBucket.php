@@ -26,9 +26,12 @@ namespace pocketmine\item;
 use pocketmine\block\Block;
 use pocketmine\block\Lava;
 use pocketmine\block\Liquid;
+use pocketmine\block\Water;
 use pocketmine\event\player\PlayerBucketEmptyEvent;
 use pocketmine\math\Vector3;
 use pocketmine\player\Player;
+use pocketmine\world\Dimension;
+use pocketmine\world\sound\FizzSound;
 
 class LiquidBucket extends Item{
 	private Liquid $liquid;
@@ -65,8 +68,15 @@ class LiquidBucket extends Item{
 		$ev = new PlayerBucketEmptyEvent($player, $blockReplace, $face, $this, VanillaItems::BUCKET());
 		$ev->call();
 		if(!$ev->isCancelled()){
-			$player->getWorld()->setBlock($blockReplace->getPosition(), $resultBlock->getFlowingForm());
-			$player->getWorld()->addSound($blockReplace->getPosition()->add(0.5, 0.5, 0.5), $resultBlock->getBucketEmptySound());
+			$world = $player->getWorld();
+			$pos = $blockReplace->getPosition();
+			if($resultBlock instanceof Water && $world->getDimension() === Dimension::NETHER){
+				//water flashes to steam in the Nether: the bucket empties but no water is placed
+				$world->addSound($pos->add(0.5, 0.5, 0.5), new FizzSound(2.6));
+			}else{
+				$world->setBlock($pos, $resultBlock->getFlowingForm());
+				$world->addSound($pos->add(0.5, 0.5, 0.5), $resultBlock->getBucketEmptySound());
+			}
 
 			$this->pop();
 			$returnedItems[] = $ev->getItem();

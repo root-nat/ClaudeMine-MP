@@ -29,8 +29,8 @@ use pocketmine\block\tile\Sign;
 use pocketmine\block\utils\SignText;
 use pocketmine\entity\Attribute;
 use pocketmine\entity\InvalidSkinException;
-use pocketmine\entity\object\Boat;
 use pocketmine\entity\Rideable;
+use pocketmine\entity\RideableEntity;
 use pocketmine\event\player\PlayerEditBookEvent;
 use pocketmine\inventory\transaction\action\DropItemAction;
 use pocketmine\inventory\transaction\InventoryTransaction;
@@ -242,8 +242,9 @@ class InGamePacketHandler extends PacketHandler{
 			if($inputFlags->get(PlayerAuthInputFlags::START_JUMPING)){
 				$this->player->jump();
 			}
-			if($inputFlags->get(PlayerAuthInputFlags::START_SNEAKING)){
-				//sneaking is how you climb out of a boat/vehicle
+			if($inputFlags->get(PlayerAuthInputFlags::START_SNEAKING) || ($this->player->getRidingVehicle() !== null && $inputFlags->get(PlayerAuthInputFlags::SNEAKING))){
+				//sneaking is how you climb out of a vehicle. A server-steered mob rider may report only the held SNEAKING
+				//flag (not the transient START_SNEAKING), so while riding, treat held sneak as a dismount intent too.
 				Rideable::dismountFrom($this->player);
 				$dismounted = true;
 				$this->lastPlayerAuthInputPosition = $rawPos;
@@ -253,19 +254,20 @@ class InGamePacketHandler extends PacketHandler{
 			}
 		}
 
-		$vehicleInfo = $packet->getVehicleInfo();
-		if($vehicleInfo !== null && ($vehicle = $this->player->getWorld()->getEntity($vehicleInfo->getPredictedVehicleActorUniqueId())) instanceof Boat && $vehicle->handleVehicleInput($this->player, $packet)){
-			//the player is steering a boat: feed the input to the boat, AND re-centre the rider on it via followVehicle (NOT
-			//handleMovement - a seated rider must not fire PlayerMoveEvent every tick nor spend the move-rate-limit) so chunk
-			//loading/ticking, viewers and sneak-to-dismount track the boat as it moves instead of the boarding point
+		$ridingVehicle = $this->player->getRidingVehicle();
+		if($ridingVehicle !== null && $ridingVehicle->handleVehicleInput($this->player, $packet)){
+			//the player is steering a boat or a saddled mob: feed its input to the vehicle, AND re-centre the rider on it via
+			//followVehicle (NOT handleMovement - a seated rider must not fire PlayerMoveEvent every tick nor spend the move
+			//rate-limit) so chunk loading, viewers and sneak-to-dismount track the vehicle as it moves. A boat is client-
+			//predicted so it tracks the client position; a server-steered mob tracks its own moved position (getRiderTrackingPosition).
 			$this->lastPlayerAuthInputPosition = $rawPos;
 			if(!$this->forceMoveSync && $hasMoved){
-				$this->player->followVehicle($newPos);
+				$this->player->followVehicle($ridingVehicle->getRiderTrackingPosition($newPos));
 			}
 		}elseif(!$dismounted && !$this->forceMoveSync && $hasMoved){
 			$this->lastPlayerAuthInputPosition = $rawPos;
 			//TODO: this packet has WAYYYYY more useful information that we're not using
-			//(skipped on the tick we dismounted, so syncDismountedPlayer's side-of-boat position isn't clobbered by the seat)
+			//(skipped on the tick we dismounted, so syncDismountedPlayer's side-of-vehicle position isn't clobbered by the seat)
 			$this->player->handleMovement($newPos);
 		}
 

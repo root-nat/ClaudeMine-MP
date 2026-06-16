@@ -396,8 +396,12 @@ final class ItemTypeIds{
 	public const ZOGLIN_SPAWN_EGG = 20357;
 	public const ZOMBIE_PIGMAN_SPAWN_EGG = 20358;
 	public const PIGLIN_SPAWN_EGG = 20359;
+	public const PIGLIN_BRUTE_SPAWN_EGG = 20360;
+	public const STRIDER_SPAWN_EGG = 20361;
+	public const SADDLE = 20362;
+	public const WARPED_FUNGUS_ON_A_STICK = 20363;
 
-	public const FIRST_UNUSED_ITEM_ID = 20360;
+	public const FIRST_UNUSED_ITEM_ID = 20364;
 
 	private static int $nextDynamicId = self::FIRST_UNUSED_ITEM_ID;
 

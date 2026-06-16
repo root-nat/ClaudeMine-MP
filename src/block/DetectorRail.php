@@ -24,8 +24,15 @@ declare(strict_types=1);
 namespace pocketmine\block;
 
 use pocketmine\data\runtime\RuntimeDataDescriber;
+use pocketmine\entity\Entity;
+use pocketmine\entity\object\AbstractMinecart;
+use pocketmine\math\AxisAlignedBB;
+use pocketmine\math\Facing;
 
 class DetectorRail extends StraightOnlyRail{
+	/** How long the rail keeps emitting after a minecart was last seen, re-checked while one is present. */
+	private const DEACTIVATE_DELAY_TICKS = 4;
+
 	protected bool $activated = false;
 
 	protected function describeBlockOnlyState(RuntimeDataDescriber $w) : void{
@@ -40,5 +47,49 @@ class DetectorRail extends StraightOnlyRail{
 		$this->activated = $activated;
 		return $this;
 	}
-	//TODO
+
+	public function hasEntityCollision() : bool{
+		return true; //no collision box, but this makes onEntityInside fire for carts rolling over the rail
+	}
+
+	public function onEntityInside(Entity $entity) : bool{
+		if($entity instanceof AbstractMinecart && !$this->activated){
+			$this->position->getWorld()->scheduleDelayedBlockUpdate($this->position, 0);
+		}
+		return true;
+	}
+
+	public function onScheduledUpdate() : void{
+		$world = $this->position->getWorld();
+		$hasCart = false;
+		foreach($world->getNearbyEntities(AxisAlignedBB::one()->offset($this->position->x, $this->position->y, $this->position->z)) as $entity){
+			if($entity instanceof AbstractMinecart){
+				$hasCart = true;
+				break;
+			}
+		}
+
+		if($hasCart !== $this->activated){
+			$this->activated = $hasCart;
+			$world->setBlock($this->position, $this);
+			//detector rails power the block below (and adjacent) - refresh those neighbours' redstone
+			$world->notifyNeighbourBlockUpdate($this->position->down());
+			foreach(Facing::HORIZONTAL as $face){
+				$world->notifyNeighbourBlockUpdate($this->position->getSide($face));
+			}
+		}
+		if($hasCart){
+			$world->scheduleDelayedBlockUpdate($this->position, self::DEACTIVATE_DELAY_TICKS);
+		}
+	}
+
+	public function getWeakRedstonePower(int $face) : int{
+		return $this->activated ? 15 : 0;
+	}
+
+	public function getStrongRedstonePower(int $face) : int{
+		//like a pressure plate, a detector rail STRONGLY powers only the block directly below it (weak power goes to all
+		//neighbours); strong-powering every face would wrongly let an adjacent block re-emit to dust sitting on it
+		return $face === Facing::DOWN ? $this->getWeakRedstonePower($face) : 0;
+	}
 }

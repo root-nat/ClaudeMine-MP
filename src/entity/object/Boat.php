@@ -326,4 +326,9 @@ class Boat extends Rideable{
 		parent::initEntity($nbt);
 		$this->woodType = $nbt->getInt(self::TAG_WOOD_TYPE, 0);
 	}
+
+	protected function onDispose() : void{
+		$this->disposeRiding(); //chunk unload / world shutdown bypasses dismount - free the rider/passenger so they aren't stuck
+		parent::onDispose();
+	}
 }

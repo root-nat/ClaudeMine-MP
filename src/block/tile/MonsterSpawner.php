@@ -75,6 +75,47 @@ class MonsterSpawner extends Spawnable{
 	private int $spawnRange = self::DEFAULT_SPAWN_RANGE;
 	private int $requiredPlayerRange = self::DEFAULT_REQUIRED_PLAYER_RANGE;
 
+	public function getEntityTypeId() : string{
+		return $this->entityTypeId;
+	}
+
+	public function setEntityTypeId(string $entityTypeId) : void{
+		$this->entityTypeId = $entityTypeId;
+		$this->clearSpawnCompoundCache();
+	}
+
+	public function getSpawnDelay() : int{
+		return $this->spawnDelay;
+	}
+
+	public function setSpawnDelay(int $spawnDelay) : void{
+		$this->spawnDelay = $spawnDelay;
+	}
+
+	public function getMinSpawnDelay() : int{
+		return $this->minSpawnDelay;
+	}
+
+	public function getMaxSpawnDelay() : int{
+		return $this->maxSpawnDelay;
+	}
+
+	public function getSpawnPerAttempt() : int{
+		return $this->spawnPerAttempt;
+	}
+
+	public function getMaxNearbyEntities() : int{
+		return $this->maxNearbyEntities;
+	}
+
+	public function getSpawnRange() : int{
+		return $this->spawnRange;
+	}
+
+	public function getRequiredPlayerRange() : int{
+		return $this->requiredPlayerRange;
+	}
+
 	public function readSaveData(CompoundTag $nbt) : void{
 		if(($legacyIdTag = $nbt->getTag(self::TAG_LEGACY_ENTITY_TYPE_ID)) instanceof IntTag){
 			//TODO: this will cause unexpected results when there's no mapping for the entity
