@@ -176,8 +176,13 @@ final class NaturalSpawner{
 				continue;
 			}
 			[$sy, $onLava, $tall] = $spot;
-			$mob = self::createNetherMob($world, new Vector3($px + 0.5, $sy, $pz + 0.5), $world->getBiomeId($px, $sy, $pz), $onLava, $tall);
-			$mob->spawnToAll();
+			try{
+				$mob = self::createNetherMob($world, new Vector3($px + 0.5, $sy, $pz + 0.5), $world->getBiomeId($px, $sy, $pz), $onLava, $tall);
+				$mob->spawnToAll();
+			}catch(\Throwable $e){
+				//never let one broken mob type abort the whole spawn pass - log it so it can be diagnosed
+				$world->getLogger()->logException($e);
+			}
 		}
 	}
 
@@ -192,18 +197,17 @@ final class NaturalSpawner{
 		if(!$world->isChunkLoaded($x >> 4, $z >> 4)){
 			return null; //an ungenerated column reads as air and would give a phantom floor
 		}
-		for($attempt = 0; $attempt < 8; ++$attempt){
-			$y = 4 + mt_rand(0, 114); //4..118, a safe margin inside the Nether's 1..126 playable band
-			if($world->getBlockAt($x, $y, $z)->isSolid() || $world->getBlockAt($x, $y + 1, $z)->isSolid()){
-				continue; //no room to stand
-			}
+		//scan DOWN from a random height for the first cell with two clear blocks over a solid floor (or a lava surface).
+		//Random-sampling single heights almost always lands in solid netherrack or the open air above it; descending
+		//reliably finds the netherrack surface, a cave floor, or the lava seas - so mobs actually spawn.
+		for($y = 30 + mt_rand(0, 90); $y > 4; --$y){
 			$below = $world->getBlockAt($x, $y - 1, $z);
-			if($below instanceof Lava){
-				$onLava = true;
-			}elseif($below->isSolid()){
-				$onLava = false;
-			}else{
-				continue; //nothing underfoot - over the void
+			$onLava = $below instanceof Lava;
+			if(!$onLava && !$below->isSolid()){
+				continue; //nothing underfoot yet - keep descending
+			}
+			if($world->getBlockAt($x, $y, $z)->isSolid() || $world->getBlockAt($x, $y + 1, $z)->isSolid()){
+				continue; //the floor is capped - keep descending to a lower opening (e.g. a cave)
 			}
 			$tall = !$world->getBlockAt($x, $y + 2, $z)->isSolid() && !$world->getBlockAt($x, $y + 3, $z)->isSolid();
 			return [$y, $onLava, $tall];

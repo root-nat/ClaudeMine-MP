@@ -25,8 +25,10 @@ namespace pocketmine\world\generator\hell;
 
 use pocketmine\block\Block;
 use pocketmine\block\NetherWartPlant;
+use pocketmine\block\utils\SlabType;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\bedrock\BiomeIds;
+use pocketmine\math\Axis;
 use pocketmine\math\Facing;
 use pocketmine\world\biome\BiomeRegistry;
 use pocketmine\world\ChunkManager;
@@ -102,16 +104,27 @@ class Nether extends Generator{
 		);
 		$this->populators[] = new NetherFortressPopulator($this->seed, $fortress);
 
-		//bastion remnants: blackstone courtyards with crenellated ramparts; their loot chest and piglins are filled in on
-		//the main thread by NetherBastionFurnisher (registered for 'nether' in ChunkFurnisherRegistry)
+		//bastion remnants: crenellated blackstone courtyards on polished-basalt stilts with a walled treasure chamber;
+		//their loot chest and piglins are filled in on the main thread by NetherBastionFurnisher (registered for 'nether'
+		//in ChunkFurnisherRegistry)
+		$bastionStairStateIds = [];
+		foreach([Facing::NORTH, Facing::SOUTH, Facing::EAST, Facing::WEST] as $facing){
+			$bastionStairStateIds[$facing] = VanillaBlocks::POLISHED_BLACKSTONE_BRICK_STAIRS()->setFacing($facing)->getStateId();
+		}
 		$bastion = new NetherBastionStructure(
 			Block::EMPTY_STATE_ID,
 			VanillaBlocks::BLACKSTONE()->getStateId(),
+			VanillaBlocks::POLISHED_BLACKSTONE()->getStateId(),
 			VanillaBlocks::POLISHED_BLACKSTONE_BRICKS()->getStateId(),
+			VanillaBlocks::CRACKED_POLISHED_BLACKSTONE_BRICKS()->getStateId(),
+			VanillaBlocks::CHISELED_POLISHED_BLACKSTONE()->getStateId(),
 			VanillaBlocks::GILDED_BLACKSTONE()->getStateId(),
+			VanillaBlocks::POLISHED_BASALT()->setAxis(Axis::Y)->getStateId(),
 			VanillaBlocks::GOLD()->getStateId(),
 			VanillaBlocks::MAGMA()->getStateId(),
-			VanillaBlocks::CHEST()->getStateId()
+			VanillaBlocks::CHEST()->getStateId(),
+			$bastionStairStateIds,
+			VanillaBlocks::POLISHED_BLACKSTONE_BRICK_SLAB()->setSlabType(SlabType::TOP)->getStateId()
 		);
 		$this->populators[] = new NetherBastionPopulator($this->seed, $bastion);
 	}

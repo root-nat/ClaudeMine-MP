@@ -26,6 +26,7 @@ namespace pocketmine\network\mcpe;
 use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\DataDecodeException;
+use pocketmine\command\CommandOverloadProvider;
 use pocketmine\entity\effect\EffectInstance;
 use pocketmine\event\player\PlayerDuplicateLoginEvent;
 use pocketmine\event\player\PlayerResourcePackOfferEvent;
@@ -1198,15 +1199,18 @@ class NetworkSession{
 			}
 
 			$description = $command->getDescription();
+			//a command may advertise typed parameter overloads (enums) for client-side autocomplete; otherwise it gets the
+			//generic free-text "args" parameter
+			$overloads = $command instanceof CommandOverloadProvider
+				? $command->getCommandOverloads()
+				: [new CommandOverload(chaining: false, parameters: [CommandParameter::standard("args", AvailableCommandsPacket::ARG_TYPE_RAWTEXT, 0, true)])];
 			$data = new CommandData(
 				$lname, //TODO: commands containing uppercase letters in the name crash 1.9.0 client
 				$description instanceof Translatable ? $this->player->getLanguage()->translate($description) : $description,
 				0,
 				CommandPermissions::NORMAL,
 				$aliasObj,
-				[
-					new CommandOverload(chaining: false, parameters: [CommandParameter::standard("args", AvailableCommandsPacket::ARG_TYPE_RAWTEXT, 0, true)])
-				],
+				$overloads,
 				chainedSubCommandData: []
 			);
 

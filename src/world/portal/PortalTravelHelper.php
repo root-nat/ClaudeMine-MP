@@ -89,6 +89,31 @@ final class PortalTravelHelper{
 		);
 	}
 
+	/**
+	 * Starts generating the nether-portal destination chunk without teleporting, called the moment an entity enters a
+	 * portal. By the time the entry animation finishes and {@link self::travelThroughNetherPortal} runs, the chunk is
+	 * already populated, so the teleport happens instantly instead of stalling on generation.
+	 */
+	public static function warmUpNetherPortal(Entity $entity) : void{
+		$sourceWorld = $entity->getWorld();
+		$sourceDimension = $sourceWorld->getDimension();
+		if($sourceDimension === Dimension::THE_END){
+			return;
+		}
+		$targetDimension = $sourceDimension === Dimension::NETHER ? Dimension::OVERWORLD : Dimension::NETHER;
+		$targetWorld = self::resolveDimensionWorld($sourceWorld, $targetDimension);
+		if($targetWorld === null){
+			return;
+		}
+
+		$position = $entity->getPosition();
+		$scale = $sourceDimension->getCoordinateScale() / $targetDimension->getCoordinateScale();
+		$targetX = (int) floor($position->x * $scale);
+		$targetZ = (int) floor($position->z * $scale);
+		//fire-and-forget: just warm the chunk up; travelThroughNetherPortal() will find it ready and teleport at once
+		$targetWorld->orderChunkPopulation($targetX >> Chunk::COORD_BIT_SIZE, $targetZ >> Chunk::COORD_BIT_SIZE, null);
+	}
+
 	public static function travelThroughEndPortal(Entity $entity) : void{
 		$sourceWorld = $entity->getWorld();
 		if($sourceWorld->getDimension() === Dimension::THE_END){
@@ -176,11 +201,40 @@ final class PortalTravelHelper{
 	}
 
 	private static function findOrCreateNetherPortal(World $world, int $x, int $y, int $z) : Position{
-		$existing = self::findNetherPortal($world, $x, $y, $z);
-		if($existing !== null){
-			return $existing;
+		$portal = self::findNetherPortal($world, $x, $y, $z) ?? self::createNetherPortal($world, $x, $y, $z);
+		//never drop the player inside the portal blocks/obsidian - they get wedged and can't move until they're forced
+		//out. Step them onto a safe spot just outside the portal instead.
+		return self::safeExitNear($world, $portal->getFloorX(), $portal->getFloorY(), $portal->getFloorZ());
+	}
+
+	/**
+	 * Given any portal block, returns a safe standing position just outside the portal: a cell with two clear blocks over
+	 * a solid floor, around the portal's base. Falls back to the portal base if nothing better is found.
+	 */
+	private static function safeExitNear(World $world, int $x, int $y, int $z) : Position{
+		//drop to the bottom of the portal column so the player exits at its base, not wedged up in the frame
+		while($y > $world->getMinY() + 2 && self::isPortalBlock($world, $x, $y - 1, $z)){
+			--$y;
 		}
-		return self::createNetherPortal($world, $x, $y, $z);
+		//the obsidian frame's bottom can sit a block above the surrounding floor, so check the base level and one below
+		foreach([[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, -1], [1, -1], [-1, 1]] as [$dx, $dz]){
+			foreach([0, -1] as $dy){
+				if(self::isStandable($world, $x + $dx, $y + $dy, $z + $dz)){
+					return new Position($x + $dx + 0.5, $y + $dy, $z + $dz + 0.5, $world);
+				}
+			}
+		}
+		return new Position($x + 0.5, $y, $z + 0.5, $world);
+	}
+
+	private static function isPortalBlock(World $world, int $x, int $y, int $z) : bool{
+		return $world->getBlockAt($x, $y, $z)->getTypeId() === BlockTypeIds::NETHER_PORTAL;
+	}
+
+	private static function isStandable(World $world, int $x, int $y, int $z) : bool{
+		return $world->getBlockAt($x, $y - 1, $z)->isSolid()
+			&& $world->getBlockAt($x, $y, $z)->getTypeId() === BlockTypeIds::AIR
+			&& $world->getBlockAt($x, $y + 1, $z)->getTypeId() === BlockTypeIds::AIR;
 	}
 
 	private static function findNetherPortal(World $world, int $x, int $y, int $z) : ?Position{
@@ -278,9 +332,8 @@ final class PortalTravelHelper{
 			}
 		}
 
-		//arrive standing ON the floor, one block IN FRONT of the portal plane (in the cleared chamber) - not embedded in the
-		//portal blocks, so there's room to move and no immediate re-trigger
-		return new Position($x + 0.5, $floorY, $z + 1.5, $world);
+		//return one of the portal's own blocks; findOrCreateNetherPortal() resolves a safe standing spot beside it
+		return new Position($x, $floorY + 1, $z, $world);
 	}
 
 	private static function findPortalFloor(World $world, int $x, int $y, int $z) : int{

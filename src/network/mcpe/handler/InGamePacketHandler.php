@@ -571,7 +571,17 @@ class InGamePacketHandler extends PacketHandler{
 	}
 
 	private function handleUseItemOnEntityTransaction(UseItemOnEntityTransactionData $data) : bool{
-		$target = $this->player->getWorld()->getEntity($data->getActorRuntimeId());
+		$runtimeId = $data->getActorRuntimeId();
+		$target = $this->player->getWorld()->getEntity($runtimeId);
+
+		//[ATTACK-DIAG] temporary instrumentation to localise "mobs can't be attacked" on the 1.26.30 port - remove after diagnosis
+		$this->session->getLogger()->info(
+			"[ATTACK-DIAG] action=" . $data->getActionType() .
+			" runtimeId=" . $runtimeId .
+			" target=" . ($target === null ? "NULL" : $target::class) .
+			" flagged=" . ($target !== null && $target->isFlaggedForDespawn() ? "yes" : "no")
+		);
+
 		//TODO: HACK! We really shouldn't be keeping disconnected players (and generally flagged-for-despawn entities)
 		//in the world's entity table, but changing that is too risky for a hotfix. This workaround will do for now.
 		if($target === null || $target->isFlaggedForDespawn()){
@@ -585,7 +595,13 @@ class InGamePacketHandler extends PacketHandler{
 				$this->player->interactEntity($target, $data->getClickPosition());
 				return true;
 			case UseItemOnEntityTransactionData::ACTION_ATTACK:
-				$this->player->attackEntity($target);
+			//1.26.30 sends melee hits on an entity as ACTION_ITEM_INTERACT(2) instead of the classic ACTION_ATTACK(1); both
+			//mean "the player struck this entity", so route them to the same attack path
+			case UseItemOnEntityTransactionData::ACTION_ITEM_INTERACT:
+				$before = $target instanceof \pocketmine\entity\Living ? $target->getHealth() : -1.0;
+				$result = $this->player->attackEntity($target);
+				$after = $target instanceof \pocketmine\entity\Living ? $target->getHealth() : -1.0;
+				$this->session->getLogger()->info("[ATTACK-DIAG] attackEntity=" . ($result ? "true" : "false") . " health " . $before . " -> " . $after);
 				return true;
 		}
 

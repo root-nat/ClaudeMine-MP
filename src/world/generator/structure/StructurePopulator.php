@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\world\generator\structure;
 
+use Closure;
 use pocketmine\utils\Random;
 use pocketmine\world\ChunkManager;
 use pocketmine\world\format\Chunk;
@@ -42,12 +43,22 @@ final class StructurePopulator implements Populator{
 
 	private const ANCHOR_ATTEMPTS = 6;
 
+	/** Per-region seed salt for the dungeon anchor draw. Shared by {@link self::forEachRegionCandidate} so the populator
+	 * and the main-thread {@link DungeonFurnisher} derive the same candidate columns. */
+	public const SALT = 0x6a17;
+
+	//placement parameters: the generator registration (Normal) and the DungeonFurnisher MUST agree on these, so they live
+	//here as the single source of truth and double as the constructor defaults.
+	public const DEFAULT_RARITY = 8;
+	public const DEFAULT_MIN_ANCHOR_Y = -54;
+	public const DEFAULT_MAX_ANCHOR_Y = 46;
+
 	public function __construct(
 		private int $worldSeed,
 		private DungeonStructure $dungeon,
-		private int $rarity = 8,
-		private int $minAnchorY = -54,
-		private int $maxAnchorY = 46,
+		private int $rarity = self::DEFAULT_RARITY,
+		private int $minAnchorY = self::DEFAULT_MIN_ANCHOR_Y,
+		private int $maxAnchorY = self::DEFAULT_MAX_ANCHOR_Y,
 		private int $airStateId = 0
 	){}
 
@@ -63,43 +74,54 @@ final class StructurePopulator implements Populator{
 	 */
 	public function tryPlace(GenerationVolume $volume, int $chunkX, int $chunkZ) : bool{
 		$placed = false;
-		//a dungeon anchored in any of the 8 neighbouring regions may reach into this chunk
-		for($rx = $chunkX - 1; $rx <= $chunkX + 1; ++$rx){
-			for($rz = $chunkZ - 1; $rz <= $chunkZ + 1; ++$rz){
-				if($this->tryPlaceRegion($volume, $rx, $rz)){
+		self::forEachRegionCandidate($this->worldSeed, $chunkX, $chunkZ, $this->rarity, $this->minAnchorY, $this->maxAnchorY, $volume->getMinY(), $volume->getMaxY(),
+			function(int $x, int $z, int $startY, int $lowY, int $highY, Random $random) use ($volume, &$placed) : bool{
+				$anchorY = $this->findCaveFloor($volume, $x, $startY, $z, $lowY, $highY);
+				if($anchorY !== null && $this->dungeon->canPlace($volume, $x, $anchorY, $z)){
+					$this->dungeon->place($volume, $x, $anchorY, $z, $random);
 					$placed = true;
+					return true; //placed - stop this region's attempts
 				}
-			}
-		}
+				return false;
+			});
 		return $placed;
 	}
 
-	private function tryPlaceRegion(GenerationVolume $volume, int $regionX, int $regionZ) : bool{
-		$random = RegionRandom::derive($this->worldSeed, $regionX, $regionZ, 0x6a17);
-		if($this->rarity > 1 && $random->nextBoundedInt($this->rarity) !== 0){
-			return false;
-		}
-
-		$baseX = $regionX * Chunk::EDGE_LENGTH;
-		$baseZ = $regionZ * Chunk::EDGE_LENGTH;
-		$lowY = max($volume->getMinY() + 2, $this->minAnchorY);
-		$highY = min($volume->getMaxY() - 6, $this->maxAnchorY);
-		if($highY <= $lowY){
-			return false;
-		}
-
-		for($attempt = 0; $attempt < self::ANCHOR_ATTEMPTS; ++$attempt){
-			$x = $baseX + $random->nextBoundedInt(Chunk::EDGE_LENGTH);
-			$z = $baseZ + $random->nextBoundedInt(Chunk::EDGE_LENGTH);
-			$startY = $lowY + $random->nextBoundedInt($highY - $lowY);
-
-			$anchorY = $this->findCaveFloor($volume, $x, $startY, $z, $lowY, $highY);
-			if($anchorY !== null && $this->dungeon->canPlace($volume, $x, $anchorY, $z)){
-				$this->dungeon->place($volume, $x, $anchorY, $z, $random);
-				return true;
+	/**
+	 * Replays the deterministic per-region dungeon anchor draw shared by the async populator (placement) and the
+	 * main-thread {@link DungeonFurnisher} (loot). For every region whose footprint can reach (chunkX, chunkZ) it derives
+	 * the region Random, rolls rarity, then draws up to {@link self::ANCHOR_ATTEMPTS} candidate (x, z, startY) anchors and
+	 * invokes $attempt for each; $attempt returns true to stop this region (i.e. the dungeon was placed/found here),
+	 * mirroring how placement stops at the first viable cave floor. Deterministic for a world seed; the lowY/highY window
+	 * is a function of the same min/max anchor Y and the volume/world vertical bounds on both sides.
+	 *
+	 * @phpstan-param Closure(int $x, int $z, int $startY, int $lowY, int $highY, Random $random) : bool $attempt
+	 */
+	public static function forEachRegionCandidate(int $worldSeed, int $chunkX, int $chunkZ, int $rarity, int $minAnchorY, int $maxAnchorY, int $boundsMinY, int $boundsMaxY, Closure $attempt) : void{
+		//a dungeon anchored in any of the 8 neighbouring regions may reach into this chunk
+		for($rx = $chunkX - 1; $rx <= $chunkX + 1; ++$rx){
+			for($rz = $chunkZ - 1; $rz <= $chunkZ + 1; ++$rz){
+				$random = RegionRandom::derive($worldSeed, $rx, $rz, self::SALT);
+				if($rarity > 1 && $random->nextBoundedInt($rarity) !== 0){
+					continue;
+				}
+				$baseX = $rx * Chunk::EDGE_LENGTH;
+				$baseZ = $rz * Chunk::EDGE_LENGTH;
+				$lowY = max($boundsMinY + 2, $minAnchorY);
+				$highY = min($boundsMaxY - 6, $maxAnchorY);
+				if($highY <= $lowY){
+					continue;
+				}
+				for($a = 0; $a < self::ANCHOR_ATTEMPTS; ++$a){
+					$x = $baseX + $random->nextBoundedInt(Chunk::EDGE_LENGTH);
+					$z = $baseZ + $random->nextBoundedInt(Chunk::EDGE_LENGTH);
+					$startY = $lowY + $random->nextBoundedInt($highY - $lowY);
+					if($attempt($x, $z, $startY, $lowY, $highY, $random)){
+						break;
+					}
+				}
 			}
 		}
-		return false;
 	}
 
 	/**

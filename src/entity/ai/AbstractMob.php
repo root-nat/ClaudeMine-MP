@@ -23,6 +23,7 @@ declare(strict_types=1);
 
 namespace pocketmine\entity\ai;
 
+use pocketmine\entity\ai\goal\FloatGoal;
 use pocketmine\entity\ai\goal\Goal;
 use pocketmine\entity\ai\goal\GoalSelector;
 use pocketmine\entity\ai\memory\Memory;
@@ -81,6 +82,9 @@ abstract class AbstractMob extends Living implements MobContext{
 		$this->aiMemory = new Memory();
 		$this->goalSelector = new GoalSelector();
 		$this->targetSelector = new TargetSelector();
+		//every land/air AI mob swims up out of water rather than sinking and drowning; claims only the JUMP slot so it runs
+		//alongside the species' own movement goals. Registered before registerBehaviour() so its high priority wins the slot.
+		$this->addGoal(0, new FloatGoal());
 		$this->registerBehaviour();
 	}
 

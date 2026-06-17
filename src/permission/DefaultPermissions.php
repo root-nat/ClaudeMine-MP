@@ -136,6 +136,7 @@ abstract class DefaultPermissions{
 
 		foreach([
 			Names::COMMAND_GAMERULE => "Allows the user to query or change world game rules",
+			Names::COMMAND_LOCATE => "Allows the user to locate the nearest structure or biome",
 			Names::COMMAND_WEATHER => "Allows the user to change the weather",
 		] as $permission => $description){
 			self::registerPermission(new Permission($permission, $description), [$operatorRoot]);

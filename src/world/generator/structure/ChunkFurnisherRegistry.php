@@ -45,6 +45,22 @@ final class ChunkFurnisherRegistry{
 		$bastionFurnisher = new NetherBastionFurnisher();
 		$this->register("nether", $bastionFurnisher);
 		$this->register("hell", $bastionFurnisher);
+
+		//overworld surface structures (desert temple chests, ...) - registered under both names the Normal generator is
+		//known by (GeneratorManager aliases "normal" -> "default") so either world name gets its loot filled
+		$overworldFurnisher = new OverworldStructureFurnisher();
+		$this->register("normal", $overworldFurnisher);
+		$this->register("default", $overworldFurnisher);
+
+		//jigsaw villages fill their house chests and spawn their villagers by re-deriving the assembly (see VillageFurnisher)
+		$villageFurnisher = new VillageFurnisher();
+		$this->register("normal", $villageFurnisher);
+		$this->register("default", $villageFurnisher);
+
+		//cave dungeons: fill the loot chests the async generator could only place as bare blocks (see DungeonFurnisher)
+		$dungeonFurnisher = new DungeonFurnisher();
+		$this->register("normal", $dungeonFurnisher);
+		$this->register("default", $dungeonFurnisher);
 	}
 
 	public function register(string $generatorName, ChunkFurnisher $furnisher) : void{

@@ -734,9 +734,16 @@ abstract class Entity{
 
 		if($this->touchingNetherPortal){
 			$this->touchingNetherPortal = false;
-			if($this->portalCooldown === 0 && ++$this->portalTicks >= $this->getRequiredNetherPortalTicks()){
-				$this->portalTicks = 0;
-				PortalTravelHelper::travelThroughNetherPortal($this);
+			if($this->portalCooldown === 0){
+				if($this->portalTicks === 0){
+					//kick off destination generation the moment we enter, so it's ready by the time the entry animation
+					//ends and the teleport below fires with no extra wait
+					PortalTravelHelper::warmUpNetherPortal($this);
+				}
+				if(++$this->portalTicks >= $this->getRequiredNetherPortalTicks()){
+					$this->portalTicks = 0;
+					PortalTravelHelper::travelThroughNetherPortal($this);
+				}
 			}
 		}else{
 			$this->portalTicks = 0;

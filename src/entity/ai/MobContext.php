@@ -62,6 +62,12 @@ interface MobContext{
 	public function isOnGround() : bool;
 
 	/**
+	 * Whether the mob's head is in water. Used by {@link \pocketmine\entity\ai\goal\FloatGoal} to swim up instead of
+	 * sinking and drowning. Implementations forward to Entity::isUnderwater().
+	 */
+	public function isUnderwater() : bool;
+
+	/**
 	 * Bedrock follow_range attribute: the search radius for targets and pathing.
 	 */
 	public function getFollowRange() : float;

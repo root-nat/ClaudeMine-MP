@@ -27,8 +27,12 @@ use pocketmine\block\Block;
 use pocketmine\block\BlockTypeIds;
 use pocketmine\block\Liquid;
 use pocketmine\block\RuntimeBlockStateRegistry;
+use pocketmine\block\utils\DyeColor;
+use pocketmine\block\utils\SlabType;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\data\bedrock\BiomeIds;
+use pocketmine\math\Axis;
+use pocketmine\math\Facing;
 use pocketmine\utils\AssumptionFailedError;
 use pocketmine\world\biome\Biome;
 use pocketmine\world\biome\BiomeRegistry;
@@ -36,7 +40,6 @@ use pocketmine\world\ChunkManager;
 use pocketmine\world\format\Chunk;
 use pocketmine\world\format\PalettedBlockArray;
 use pocketmine\world\format\SubChunk;
-use pocketmine\world\generator\biome\BiomeSelector;
 use pocketmine\world\generator\carver\CarverPopulator;
 use pocketmine\world\generator\carver\CaveCarver;
 use pocketmine\world\generator\carver\RavineCarver;
@@ -48,12 +51,26 @@ use pocketmine\world\generator\object\OreType;
 use pocketmine\world\generator\populator\GroundCover;
 use pocketmine\world\generator\populator\Ore;
 use pocketmine\world\generator\populator\Populator;
+use pocketmine\world\generator\structure\DesertTempleStructure;
+use pocketmine\world\generator\structure\DesertWellStructure;
+use pocketmine\world\generator\structure\AmethystGeodeStructure;
+use pocketmine\world\generator\structure\BuriedTreasureStructure;
 use pocketmine\world\generator\structure\DungeonStructure;
+use pocketmine\world\generator\structure\FossilStructure;
+use pocketmine\world\generator\structure\IglooStructure;
+use pocketmine\world\generator\structure\JungleTempleStructure;
+use pocketmine\world\generator\structure\OceanRuinsStructure;
+use pocketmine\world\generator\structure\PillagerOutpostStructure;
+use pocketmine\world\generator\structure\RuinedPortalStructure;
+use pocketmine\world\generator\structure\ShipwreckStructure;
 use pocketmine\world\generator\structure\StructurePopulator;
+use pocketmine\world\generator\structure\SurfaceStructurePopulator;
+use pocketmine\world\generator\structure\VillagePalette;
+use pocketmine\world\generator\structure\VillageStructure;
+use pocketmine\world\generator\structure\WitchHutStructure;
 use pocketmine\world\World;
 use function ceil;
 use function floor;
-use function fmod;
 use function is_int;
 use function max;
 use function min;
@@ -66,7 +83,7 @@ class Normal extends Generator{
 	/** @var Populator[] */
 	private array $generationPopulators = [];
 	private Simplex $noiseBase;
-	private BiomeSelector $selector;
+	private OverworldBiomeSelector $selector;
 	private Gaussian $gaussian;
 
 	private const NOISE_SAMPLING_RATE_Y = 8;
@@ -82,44 +99,7 @@ class Normal extends Generator{
 		$this->noiseBase = new Simplex($this->random, 4, 1 / 4, 1 / 32);
 		$this->random->setSeed($this->seed);
 
-		$this->selector = new class($this->random) extends BiomeSelector{
-			protected function lookup(float $temperature, float $rainfall) : int{
-				if($rainfall < 0.25){
-					if($temperature < 0.7){
-						return BiomeIds::OCEAN;
-					}elseif($temperature < 0.85){
-						return BiomeIds::RIVER;
-					}else{
-						return BiomeIds::SWAMPLAND;
-					}
-				}elseif($rainfall < 0.60){
-					if($temperature < 0.25){
-						return BiomeIds::ICE_PLAINS;
-					}elseif($temperature < 0.75){
-						return BiomeIds::PLAINS;
-					}else{
-						return BiomeIds::DESERT;
-					}
-				}elseif($rainfall < 0.80){
-					if($temperature < 0.25){
-						return BiomeIds::TAIGA;
-					}elseif($temperature < 0.75){
-						return BiomeIds::FOREST;
-					}else{
-						return BiomeIds::BIRCH_FOREST;
-					}
-				}else{
-					if($temperature < 0.20){
-						return BiomeIds::EXTREME_HILLS;
-					}elseif($temperature < 0.40){
-						return BiomeIds::EXTREME_HILLS_EDGE;
-					}else{
-						return BiomeIds::RIVER;
-					}
-				}
-			}
-		};
-
+		$this->selector = new OverworldBiomeSelector($this->random);
 		$this->selector->recalculate();
 
 		//caves and ravines must be carved BEFORE GroundCover so the surface layer is re-applied over exposed cave faces
@@ -163,26 +143,154 @@ class Normal extends Generator{
 			VanillaBlocks::MONSTER_SPAWNER()->getStateId(),
 			VanillaBlocks::CHEST()->getStateId()
 		);
-		$this->populators[] = new StructurePopulator($this->seed, $dungeon, rarity: 8, airStateId: Block::EMPTY_STATE_ID);
+		$this->populators[] = new StructurePopulator($this->seed, $dungeon, rarity: StructurePopulator::DEFAULT_RARITY, airStateId: Block::EMPTY_STATE_ID);
+
+		//surface structures: anchored on the top solid ground block, gated by biome, built around an untouched anchor
+		//column so each chunk re-derives them identically. Loot chests are filled main-thread by OverworldStructureFurnisher
+		//(registered for 'normal'/'default' in ChunkFurnisherRegistry).
+		$desertWell = new DesertWellStructure(
+			VanillaBlocks::SANDSTONE()->getStateId(),
+			VanillaBlocks::SANDSTONE_SLAB()->setSlabType(SlabType::TOP)->getStateId(),
+			VanillaBlocks::WATER()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $desertWell, salt: DesertWellStructure::SALT, rarity: DesertWellStructure::RARITY, biomeAllow: [BiomeIds::DESERT], maxRadius: DesertWellStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		$desertTemple = new DesertTempleStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::SANDSTONE()->getStateId(),
+			VanillaBlocks::CUT_SANDSTONE()->getStateId(),
+			VanillaBlocks::CHISELED_SANDSTONE()->getStateId(),
+			VanillaBlocks::STAINED_CLAY()->setColor(DyeColor::ORANGE)->getStateId(),
+			VanillaBlocks::STAINED_CLAY()->setColor(DyeColor::BLUE)->getStateId(),
+			VanillaBlocks::STONE_PRESSURE_PLATE()->getStateId(),
+			VanillaBlocks::TNT()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator(
+			$this->seed,
+			$desertTemple,
+			salt: DesertTempleStructure::SALT,
+			rarity: DesertTempleStructure::RARITY,
+			biomeAllow: [BiomeIds::DESERT],
+			maxRadius: DesertTempleStructure::MAX_RADIUS,
+			surfaceTopY: DesertTempleStructure::SURFACE_TOP_Y,
+			surfaceMinY: DesertTempleStructure::SURFACE_MIN_Y
+		);
+
+		//fossils: buried bone-and-coal skeletons in desert and swamp (no loot)
+		$fossil = new FossilStructure(
+			VanillaBlocks::BONE_BLOCK()->setAxis(Axis::Y)->getStateId(),
+			VanillaBlocks::COAL_ORE()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $fossil, salt: FossilStructure::SALT, rarity: FossilStructure::RARITY, biomeAllow: [BiomeIds::DESERT, BiomeIds::SWAMPLAND], maxRadius: FossilStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//swamp huts: stilted spruce shacks with a witch (spawned by OverworldStructureFurnisher)
+		$witchHut = new WitchHutStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::SPRUCE_PLANKS()->getStateId(),
+			VanillaBlocks::SPRUCE_LOG()->setAxis(Axis::Y)->getStateId(),
+			VanillaBlocks::OAK_FENCE()->getStateId(),
+			VanillaBlocks::CAULDRON()->getStateId(),
+			VanillaBlocks::CRAFTING_TABLE()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $witchHut, salt: WitchHutStructure::SALT, rarity: WitchHutStructure::RARITY, biomeAllow: [BiomeIds::SWAMPLAND], maxRadius: WitchHutStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//jungle temples: sunk mossy-cobblestone halls with two loot chests
+		$jungleTemple = new JungleTempleStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::COBBLESTONE()->getStateId(),
+			VanillaBlocks::MOSSY_COBBLESTONE()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $jungleTemple, salt: JungleTempleStructure::SALT, rarity: JungleTempleStructure::RARITY, biomeAllow: [BiomeIds::JUNGLE], maxRadius: JungleTempleStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//pillager outposts: dark-oak watchtowers with a loot chest and pillagers (spawned by the furnisher)
+		$pillagerOutpost = new PillagerOutpostStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::DARK_OAK_LOG()->setAxis(Axis::Y)->getStateId(),
+			VanillaBlocks::DARK_OAK_PLANKS()->getStateId(),
+			VanillaBlocks::DARK_OAK_FENCE()->getStateId(),
+			VanillaBlocks::COBBLESTONE()->getStateId(),
+			VanillaBlocks::LADDER()->setFacing(Facing::SOUTH)->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $pillagerOutpost, salt: PillagerOutpostStructure::SALT, rarity: PillagerOutpostStructure::RARITY, biomeAllow: [BiomeIds::PLAINS, BiomeIds::DESERT, BiomeIds::TAIGA], maxRadius: PillagerOutpostStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//igloos: snow huts hiding a stone-brick basement with a loot chest
+		$igloo = new IglooStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::SNOW()->getStateId(),
+			VanillaBlocks::ICE()->getStateId(),
+			VanillaBlocks::STONE_BRICKS()->getStateId(),
+			VanillaBlocks::MOSSY_STONE_BRICKS()->getStateId(),
+			VanillaBlocks::CRACKED_STONE_BRICKS()->getStateId(),
+			VanillaBlocks::BREWING_STAND()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $igloo, salt: IglooStructure::SALT, rarity: IglooStructure::RARITY, biomeAllow: [BiomeIds::ICE_PLAINS, BiomeIds::COLD_TAIGA], maxRadius: IglooStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//ruined portals: broken obsidian frames with a loot chest, in every land biome
+		$ruinedPortal = new RuinedPortalStructure(
+			VanillaBlocks::OBSIDIAN()->getStateId(),
+			VanillaBlocks::CRYING_OBSIDIAN()->getStateId(),
+			VanillaBlocks::NETHERRACK()->getStateId(),
+			VanillaBlocks::GOLD()->getStateId(),
+			VanillaBlocks::MAGMA()->getStateId(),
+			VanillaBlocks::STONE_BRICKS()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $ruinedPortal, salt: RuinedPortalStructure::SALT, rarity: RuinedPortalStructure::RARITY, biomeAllow: [], maxRadius: RuinedPortalStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//amethyst geodes: buried concentric basalt/calcite/amethyst shells (any biome, no loot)
+		$geode = new AmethystGeodeStructure(
+			Block::EMPTY_STATE_ID,
+			VanillaBlocks::SMOOTH_BASALT()->getStateId(),
+			VanillaBlocks::CALCITE()->getStateId(),
+			VanillaBlocks::AMETHYST()->getStateId(),
+			VanillaBlocks::BUDDING_AMETHYST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $geode, salt: AmethystGeodeStructure::SALT, rarity: AmethystGeodeStructure::RARITY, biomeAllow: [], maxRadius: AmethystGeodeStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 40);
+
+		//shipwrecks: broken wooden hulls on the ocean floor with two loot chests (surface scan skips water -> seabed)
+		$shipwreck = new ShipwreckStructure(
+			VanillaBlocks::OAK_PLANKS()->getStateId(),
+			VanillaBlocks::OAK_LOG()->setAxis(Axis::Y)->getStateId(),
+			VanillaBlocks::OAK_FENCE()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$oceans = [BiomeIds::OCEAN, BiomeIds::DEEP_OCEAN, BiomeIds::WARM_OCEAN, BiomeIds::LUKEWARM_OCEAN, BiomeIds::COLD_OCEAN, BiomeIds::FROZEN_OCEAN];
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $shipwreck, salt: ShipwreckStructure::SALT, rarity: ShipwreckStructure::RARITY, biomeAllow: $oceans, maxRadius: ShipwreckStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 30);
+
+		//buried treasure: a single Heart-of-the-Sea chest sunk under the ocean floor or a beach
+		$buriedTreasure = new BuriedTreasureStructure(VanillaBlocks::CHEST()->getStateId());
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $buriedTreasure, salt: BuriedTreasureStructure::SALT, rarity: BuriedTreasureStructure::RARITY, biomeAllow: [...$oceans, BiomeIds::BEACH], maxRadius: BuriedTreasureStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 30);
+
+		//ocean ruins: weathered stone-brick buildings on the seabed with a loot chest
+		$oceanRuins = new OceanRuinsStructure(
+			VanillaBlocks::STONE_BRICKS()->getStateId(),
+			VanillaBlocks::MOSSY_STONE_BRICKS()->getStateId(),
+			VanillaBlocks::CRACKED_STONE_BRICKS()->getStateId(),
+			VanillaBlocks::SAND()->getStateId(),
+			VanillaBlocks::CHEST()->getStateId()
+		);
+		$this->populators[] = new SurfaceStructurePopulator($this->seed, $oceanRuins, salt: OceanRuinsStructure::SALT, rarity: OceanRuinsStructure::RARITY, biomeAllow: $oceans, maxRadius: OceanRuinsStructure::MAX_RADIUS, surfaceTopY: 120, surfaceMinY: 30);
+
+		//villages: a multi-piece jigsaw structure (well plaza + paths + houses) assembled deterministically per region and
+		//furnished on the main thread by VillageFurnisher. One populator per biome theme; all share VillageStructure::SALT
+		//so they draw the SAME anchors, and the disjoint biome gates pick which palette (oak/sandstone/spruce) generates.
+		foreach([
+			[VillagePalette::plains(), [BiomeIds::PLAINS, BiomeIds::SAVANNA, BiomeIds::TAIGA]],
+			[VillagePalette::desert(), [BiomeIds::DESERT]],
+			[VillagePalette::snowy(), [BiomeIds::ICE_PLAINS, BiomeIds::COLD_TAIGA]]
+		] as [$villagePalette, $villageBiomes]){
+			$this->populators[] = new SurfaceStructurePopulator($this->seed, new VillageStructure($villagePalette), salt: VillageStructure::SALT, rarity: VillageStructure::RARITY, biomeAllow: $villageBiomes, maxRadius: VillageStructure::MAX_RADIUS, surfaceTopY: VillageStructure::SURFACE_TOP_Y, surfaceMinY: VillageStructure::SURFACE_MIN_Y);
+		}
 	}
 
 	private function pickBiome(int $x, int $z) : Biome{
-		$hash = $x * 2345803 ^ $z * 9236449 ^ $this->seed;
-		$hash *= $hash + 223;
-		//the above operations may result in a float. This probably wasn't intended, but we need to stick with it to
-		//avoid cliff edges in existing user worlds.
-		//We need to mod this so it doesn't generate an error in PHP 8.5 when we cast it back to an int.
-		$hash = (int) fmod($hash, 2.0 ** 63);
-		$xNoise = $hash >> 20 & 3;
-		$zNoise = $hash >> 22 & 3;
-		if($xNoise === 3){
-			$xNoise = 1;
-		}
-		if($zNoise === 3){
-			$zNoise = 1;
-		}
-
-		return $this->selector->pickBiome($x + $xNoise - 1, $z + $zNoise - 1);
+		//the coordinate jitter that keeps biome borders from being axis-aligned now lives on the selector, so the /locate
+		//command can reproduce the exact same biome at any column from the world seed
+		return $this->selector->pickBiomeJittered($x, $z, $this->seed);
 	}
 
 	public function generateChunk(ChunkManager $world, int $chunkX, int $chunkZ) : void{

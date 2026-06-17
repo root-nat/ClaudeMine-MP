@@ -59,6 +59,22 @@ final class BiomeRegistry{
 		$this->register(BiomeIds::EXTREME_HILLS_EDGE, new SmallMountainsBiome());
 
 		$this->register(BiomeIds::BIRCH_FOREST, new ForestBiome(TreeType::BIRCH));
+
+		$this->register(BiomeIds::JUNGLE, new JungleBiome());
+		$this->register(BiomeIds::SAVANNA, new SavannaBiome());
+		$this->register(BiomeIds::MESA, new MesaBiome());
+
+		$this->register(BiomeIds::BEACH, new BeachBiome());
+		$this->register(BiomeIds::COLD_TAIGA, new SnowyTaigaBiome());
+		$this->register(BiomeIds::MEGA_TAIGA, new MegaTaigaBiome());
+		$this->register(BiomeIds::MUSHROOM_ISLAND, new MushroomIslandBiome());
+
+		//ocean variants share the plain ocean behaviour (the difference is cosmetic / which structures gate on them)
+		$this->register(BiomeIds::DEEP_OCEAN, new DeepOceanBiome());
+		$this->register(BiomeIds::WARM_OCEAN, new OceanBiome());
+		$this->register(BiomeIds::LUKEWARM_OCEAN, new OceanBiome());
+		$this->register(BiomeIds::COLD_OCEAN, new OceanBiome());
+		$this->register(BiomeIds::FROZEN_OCEAN, new OceanBiome());
 	}
 
 	public function register(int $id, Biome $biome) : void{
